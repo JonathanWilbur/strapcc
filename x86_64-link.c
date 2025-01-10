@@ -247,10 +247,6 @@ ST_FUNC void relocate(TCCState *s1, ElfW_Rel *rel, int type, unsigned char *ptr,
             long long diff;
             diff = (long long)val - addr;
             if (diff < -2147483648LL || diff > 2147483647LL) {
-#ifdef TCC_TARGET_PE
-              /* ignore overflow with undefined weak symbols */
-              if (((ElfW(Sym)*)symtab_section->data)[sym_index].st_shndx != SHN_UNDEF)
-#endif
                 tcc_error_noabort("internal error: relocation failed");
             }
             add32le(ptr, diff);
@@ -388,9 +384,6 @@ ST_FUNC void relocate(TCCState *s1, ElfW_Rel *rel, int type, unsigned char *ptr,
         case R_X86_64_NONE:
             break;
         case R_X86_64_RELATIVE:
-#ifdef TCC_TARGET_PE
-            add32le(ptr, val - s1->pe_imagebase);
-#endif
             /* do nothing */
             break;
         default:

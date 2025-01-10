@@ -10,6 +10,14 @@ TODO:
 - [ ] `tcc_print_stats`
 - [ ] Can I get rid of _some_ of the i386 stuff?
 - [ ] Can I get rid of `__linux__` stuff?
+- [ ] Every `TCC_TARGET_*` value
+- [ ] Every `TARGETOS_*` value
+- [ ] Remove `CONFIG_TCC_BCHECK`
+- [ ] What is `ONE_SOURCE`?
+- [ ] Every `#if 0`
+- [ ] Every `PTR_SIZE` other than `8`
+- [ ] Can I get rid of `TARGET_DEFS_ONLY`?
+- [ ] `CONFIG_TCC_BACKTRACE`?
 
 Features:
 --------

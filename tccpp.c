@@ -942,12 +942,8 @@ redo_start:
                 else if (parse_flags & PARSE_FLAG_ASM_FILE)
                     p = parse_line_comment(p - 1);
             }
-#if !defined(TCC_TARGET_ARM)
             else if (parse_flags & PARSE_FLAG_ASM_FILE)
                 p = parse_line_comment(p - 1);
-#else
-            /* ARM assembly uses '#' for constants */
-#endif
             break;
 _default:
         default:
@@ -2154,18 +2150,7 @@ static void parse_escape_string(CString *outstr, const uint8_t *buf, int is_long
         if (!is_long)
             cstr_ccat(outstr, c);
         else {
-#ifdef TCC_TARGET_PE
-            /* store as UTF-16 */
-            if (c < 0x10000) {
-                cstr_wccat(outstr, c);
-            } else {
-                c -= 0x10000;
-                cstr_wccat(outstr, (c >> 10) + 0xD800);
-                cstr_wccat(outstr, (c & 0x3FF) + 0xDC00);
-            }
-#else
             cstr_wccat(outstr, c);
-#endif
         }
     }
     /* add a trailing '\0' */
@@ -2642,12 +2627,10 @@ maybe_newline:
                 p++;
                 tok = TOK_TWOSHARPS;
             } else {
-#if !defined(TCC_TARGET_ARM)
                 if (parse_flags & PARSE_FLAG_ASM_FILE) {
                     p = parse_line_comment(p - 1);
                     goto redo_no_start;
                 } else
-#endif
                 {
                     tok = '#';
                 }
@@ -3566,10 +3549,6 @@ static void tcc_predefs(TCCState *s1, CString *cs, int is_asm)
     putdefs(cs, target_machine_defs);
     putdefs(cs, target_os_defs);
 
-#ifdef TCC_TARGET_ARM
-    if (s1->float_abi == ARM_HARD_FLOAT)
-      putdef(cs, "__ARM_PCS_VFP");
-#endif
     if (is_asm)
       putdef(cs, "__ASSEMBLER__");
     if (s1->output_type == TCC_OUTPUT_PREPROCESS)

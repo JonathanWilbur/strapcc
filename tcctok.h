@@ -68,10 +68,6 @@
      DEF(TOK_TYPEOF3, "__typeof__")
      DEF(TOK_LABEL, "__label__")
 
-#ifdef TCC_TARGET_ARM64
-     DEF(TOK_UINT128, "__uint128_t")
-#endif
-
 /*********************************************************************/
 /* the following are not keywords. They are included to ease parsing */
 /* preprocessor only */
@@ -105,10 +101,8 @@
      DEF(TOK___NAN__, "__nan__")
      DEF(TOK___SNAN__, "__snan__")
      DEF(TOK___INF__, "__inf__")
-#if defined TCC_TARGET_X86_64
      DEF(TOK___mzerosf, "__mzerosf") /* -0.0 */
      DEF(TOK___mzerodf, "__mzerodf") /* -0.0 */
-#endif
 
 /* attribute identifiers */
 /* XXX: handle all tokens generically since speed is not critical */
@@ -173,16 +167,7 @@
      DEF(TOK_builtin_expect, "__builtin_expect")
      DEF(TOK_builtin_unreachable, "__builtin_unreachable")
      /*DEF(TOK_builtin_va_list, "__builtin_va_list")*/
-#if defined TCC_TARGET_PE && defined TCC_TARGET_X86_64
-     DEF(TOK_builtin_va_start, "__builtin_va_start")
-#elif defined TCC_TARGET_X86_64
      DEF(TOK_builtin_va_arg_types, "__builtin_va_arg_types")
-#elif defined TCC_TARGET_ARM64
-     DEF(TOK_builtin_va_start, "__builtin_va_start")
-     DEF(TOK_builtin_va_arg, "__builtin_va_arg")
-#elif defined TCC_TARGET_RISCV64
-     DEF(TOK_builtin_va_start, "__builtin_va_start")
-#endif
 
 /* atomic operations */
 #define DEF_ATOMIC(ID) DEF(TOK_##__##ID, "__"#ID)

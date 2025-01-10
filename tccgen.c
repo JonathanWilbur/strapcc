@@ -1404,31 +1404,6 @@ ST_FUNC void save_reg_upstack(int r, int n)
     }
 }
 
-#ifdef TCC_TARGET_ARM
-/* find a register of class 'rc2' with at most one reference on stack.
- * If none, call get_reg(rc) */
-ST_FUNC int get_reg_ex(int rc, int rc2)
-{
-    int r;
-    SValue *p;
-    
-    for(r=0;r<NB_REGS;r++) {
-        if (reg_classes[r] & rc2) {
-            int n;
-            n=0;
-            for(p = vstack; p <= vtop; p++) {
-                if ((p->r & VT_VALMASK) == r ||
-                    p->r2 == r)
-                    n++;
-            }
-            if (n <= 1)
-                return r;
-        }
-    }
-    return get_reg(rc);
-}
-#endif
-
 /* find a free register of class 'rc'. If none, save one register */
 ST_FUNC int get_reg(int rc)
 {
@@ -1634,20 +1609,16 @@ ST_FUNC void gbound_args(int nb_args)
         v = sv->sym->v;
         if (v == TOK_setjmp
           || v == TOK__setjmp
-#ifndef TCC_TARGET_PE
           || v == TOK_sigsetjmp
           || v == TOK___sigsetjmp
-#endif
-          ) {
+        ) {
             vpush_helper_func(TOK___bound_setjmp);
             vpushv(sv + 1);
             gfunc_call(1);
             func_bound_add_epilog = 1;
         }
-#if defined TCC_TARGET_I386 || defined TCC_TARGET_X86_64
         if (v == TOK_alloca)
             func_bound_add_epilog = 1;
-#endif
 #if TARGETOS_NetBSD
         if (v == TOK_longjmp) /* undo rename to __longjmp14 */
             sv->sym->asm_label = TOK___bound_longjmp;
@@ -1852,12 +1823,6 @@ ST_FUNC int gv(int rc)
 #endif
 
         bt = vtop->type.t & VT_BTYPE;
-
-#ifdef TCC_TARGET_RISCV64
-        /* XXX mega hack */
-        if (bt == VT_LDOUBLE && rc == RC_FLOAT)
-          rc = RC_INT;
-#endif
         rc2 = RC2_TYPE(bt, rc);
 
         /* need to reload if:
@@ -1932,11 +1897,6 @@ ST_FUNC int gv(int rc)
             }
         }
         vtop->r = r;
-#ifdef TCC_TARGET_C67
-        /* uses register pairs for doubles */
-        if (bt == VT_DOUBLE)
-            vtop->r2 = r+1;
-#endif
     }
     return r;
 }
@@ -2268,10 +2228,6 @@ static void gen_opl(int op)
         else if (op1 == TOK_GE)
             op1 = TOK_UGE;
         gen_op(op1);
-#if 0//def TCC_TARGET_I386
-        if (op == TOK_NE) { gsym(b); break; }
-        if (op == TOK_EQ) { gsym(a); break; }
-#endif
         gvtst_set(1, a);
         gvtst_set(0, b);
         break;
@@ -2445,38 +2401,7 @@ static void gen_opic(int op)
     }
 }
 
-#if defined TCC_TARGET_X86_64 || defined TCC_TARGET_I386
-# define gen_negf gen_opf
-#elif defined TCC_TARGET_ARM
-void gen_negf(int op)
-{
-    /* arm will detect 0-x and replace by vneg */
-    vpushi(0), vswap(), gen_op('-');
-}
-#else
-/* XXX: implement in gen_opf() for other backends too */
-void gen_negf(int op)
-{
-    /* In IEEE negate(x) isn't subtract(0,x).  Without NaNs it's
-       subtract(-0, x), but with them it's really a sign flip
-       operation.  We implement this with bit manipulation and have
-       to do some type reinterpretation for this, which TCC can do
-       only via memory.  */
-
-    int align, size, bt;
-
-    size = type_size(&vtop->type, &align);
-    bt = vtop->type.t & VT_BTYPE;
-    save_reg(gv(RC_TYPE(bt)));
-    vdup();
-    incr_bf_adr(size - 1);
-    vdup();
-    vpushi(0x80); /* flip sign */
-    gen_op('^');
-    vstore();
-    vpop();
-}
-#endif
+#define gen_negf gen_opf
 
 /* generate a floating point operation with constant propagation */
 static void gen_opif(int op)
@@ -3107,9 +3032,6 @@ op_err:
         gv(is_float(vtop->type.t & VT_BTYPE) ? RC_FLOAT : RC_INT);
 }
 
-#if defined TCC_TARGET_ARM64 || defined TCC_TARGET_RISCV64 || defined TCC_TARGET_ARM
-#define gen_cvt_itof1 gen_cvt_itof
-#else
 /* generic itof for unsigned long long case */
 static void gen_cvt_itof1(int t)
 {
@@ -3132,11 +3054,7 @@ static void gen_cvt_itof1(int t)
         gen_cvt_itof(t);
     }
 }
-#endif
 
-#if defined TCC_TARGET_ARM64 || defined TCC_TARGET_RISCV64
-#define gen_cvt_ftoi1 gen_cvt_ftoi
-#else
 /* generic ftoi for unsigned long long case */
 static void gen_cvt_ftoi1(int t)
 {
@@ -3160,7 +3078,6 @@ static void gen_cvt_ftoi1(int t)
         gen_cvt_ftoi(t);
     }
 }
-#endif
 
 /* special delayed cast for char/short */
 static void force_charshort_cast(void)
@@ -3367,13 +3284,7 @@ error:
         if (ds == 8) {
             /* need to convert from 32bit to 64bit */
             if (sbt & VT_UNSIGNED) {
-#if defined(TCC_TARGET_RISCV64)
-                /* RISC-V keeps 32bit vals in registers sign-extended.
-                   So here we need a zero-extension.  */
-                trunc = 32;
-#else
                 goto done;
-#endif
             } else {
                 gen_cvt_sxtw();
                 goto done;
@@ -3958,30 +3869,6 @@ redo:
         case TOK_STDCALL3:
             ad->f.func_call = FUNC_STDCALL;
             break;
-#ifdef TCC_TARGET_I386
-        case TOK_REGPARM1:
-        case TOK_REGPARM2:
-            skip('(');
-            n = expr_const();
-            if (n > 3) 
-                n = 3;
-            else if (n < 0)
-                n = 0;
-            if (n > 0)
-                ad->f.func_call = FUNC_FASTCALL1 + n - 1;
-            skip(')');
-            break;
-        case TOK_FASTCALL1:
-        case TOK_FASTCALL2:
-        case TOK_FASTCALL3:
-            ad->f.func_call = FUNC_FASTCALLW;
-            break;
-        case TOK_THISCALL1:
-        case TOK_THISCALL2:
-        case TOK_THISCALL3:
-            ad->f.func_call = FUNC_THISCALL;
-            break;
-#endif
         case TOK_MODE:
             skip('(');
             switch(tok) {
@@ -6681,11 +6568,7 @@ static void gfunc_return(CType *func_type)
         int ret_align, ret_nregs, regsize;
         ret_nregs = gfunc_sret(func_type, func_var, &ret_type,
                                &ret_align, &regsize);
-        if (ret_nregs < 0) {
-#ifdef TCC_TARGET_RISCV64
-            arch_transfer_ret_regs(0);
-#endif
-        } else if (0 == ret_nregs) {
+        if (0 == ret_nregs) {
             /* if returning structure, must copy it to implicit
                first pointer arg location */
             type = *func_type;
@@ -7419,9 +7302,6 @@ static void parse_init_elem(int expr_type)
         if (((vtop->r & (VT_VALMASK | VT_LVAL)) != VT_CONST
              && ((vtop->r & (VT_SYM|VT_LVAL)) != (VT_SYM|VT_LVAL)
                  || vtop->sym->v < SYM_FIRST_ANOM))
-#ifdef TCC_TARGET_PE
-                 || ((vtop->r & VT_SYM) && vtop->sym->a.dllimport)
-#endif
            )
             tcc_error("initializer element is not constant");
         break;
@@ -7453,9 +7333,6 @@ static void init_putz(init_params *p, unsigned long c, int size)
         vseti(VT_LOCAL, c);
         vpushi(0);
         vpushs(size);
-#if defined TCC_TARGET_ARM && defined TCC_ARM_EABI
-        vswap();  /* using __aeabi_memset(void*, size_t, int) */
-#endif
         gfunc_call(3);
     }
 }
@@ -7868,11 +7745,7 @@ static void decl_initializer(init_params *p, CType *type, unsigned long c, int f
         /* only parse strings here if correct type (otherwise: handle
            them as ((w)char *) expressions */
         if ((tok == TOK_LSTR && 
-#ifdef TCC_TARGET_PE
-             (t1->t & VT_BTYPE) == VT_SHORT && (t1->t & VT_UNSIGNED)
-#else
              (t1->t & VT_BTYPE) == VT_INT
-#endif
             ) || (tok == TOK_STR && (t1->t & VT_BTYPE) == VT_BYTE)) {
 	    len = 0;
             cstr_reset(&initstr);
@@ -8587,22 +8460,6 @@ static int decl(int l)
             #endif
             }
 
-#ifdef TCC_TARGET_PE
-            if (ad.a.dllimport || ad.a.dllexport) {
-                if (type.t & VT_STATIC)
-                    tcc_error("cannot have dll linkage with static");
-                if (type.t & VT_TYPEDEF) {
-                    tcc_warning("'%s' attribute ignored for typedef",
-                        ad.a.dllimport ? (ad.a.dllimport = 0, "dllimport") :
-                        (ad.a.dllexport = 0, "dllexport"));
-                } else if (ad.a.dllimport) {
-                    if ((type.t & VT_BTYPE) == VT_FUNC)
-                        ad.a.dllimport = 0;
-                    else
-                        type.t |= VT_EXTERN;
-                }
-            }
-#endif
             if (tok == '{') {
                 if (l != VT_CONST)
                     tcc_error("cannot use local functions");

@@ -541,37 +541,8 @@ static void asm_parse_directive(TCCState *s1, int global)
         ind += size;
         break;
     case TOK_ASMDIR_quad:
-#ifdef TCC_TARGET_X86_64
-	size = 8;
-	goto asm_data;
-#else
-        next();
-        for(;;) {
-            uint64_t vl;
-            const char *p;
-
-            p = tokc.str.data;
-            if (tok != TOK_PPNUM) {
-            error_constant:
-                tcc_error("64 bit constant");
-            }
-            vl = strtoll(p, (char **)&p, 0);
-            if (*p != '\0')
-                goto error_constant;
-            next();
-            if (sec->sh_type != SHT_NOBITS) {
-                /* XXX: endianness */
-                gen_le32(vl);
-                gen_le32(vl >> 32);
-            } else {
-                ind += 8;
-            }
-            if (tok != ',')
-                break;
-            next();
-        }
-        break;
-#endif
+        size = 8;
+        goto asm_data;
     case TOK_ASMDIR_byte:
         size = 1;
         goto asm_data;
@@ -590,10 +561,8 @@ static void asm_parse_directive(TCCState *s1, int global)
             if (sec->sh_type != SHT_NOBITS) {
                 if (size == 4) {
                     gen_expr32(&e);
-#ifdef TCC_TARGET_X86_64
 		} else if (size == 8) {
 		    gen_expr64(&e);
-#endif
                 } else {
                     if (e.sym)
                         expect("constant");
@@ -926,51 +895,10 @@ static void asm_parse_directive(TCCState *s1, int global)
 	next();
 	pop_section(s1);
 	break;
-#ifdef TCC_TARGET_I386
-    case TOK_ASMDIR_code16:
-        {
-            next();
-            s1->seg_size = 16;
-        }
-        break;
-    case TOK_ASMDIR_code32:
-        {
-            next();
-            s1->seg_size = 32;
-        }
-        break;
-#endif
-#ifdef TCC_TARGET_X86_64
     /* added for compatibility with GAS */
     case TOK_ASMDIR_code64:
         next();
         break;
-#endif
-#ifdef TCC_TARGET_RISCV64
-    case TOK_ASMDIR_option:
-        next();
-        switch(tok){
-            case TOK_ASM_rvc:    /* Will be deprecated soon in favor of arch */
-            case TOK_ASM_norvc:  /* Will be deprecated soon in favor of arch */
-            case TOK_ASM_pic:
-            case TOK_ASM_nopic:
-            case TOK_ASM_relax:
-            case TOK_ASM_norelax:
-            case TOK_ASM_push:
-            case TOK_ASM_pop:
-                /* TODO: unimplemented */
-                next();
-                break;
-            case TOK_ASM_arch:
-                /* TODO: unimplemented, requires extra parsing */
-                tcc_error("unimp .option '.%s'", get_tok_str(tok, NULL));
-                break;
-            default:
-                tcc_error("unknown .option '.%s'", get_tok_str(tok, NULL));
-                break;
-        }
-        break;
-#endif
     /* TODO: Implement symvar support. FreeBSD >= 14 needs this */
     case TOK_ASMDIR_symver:
 	next();
@@ -1071,19 +999,13 @@ static void tcc_assemble_inline(TCCState *s1, const char *str, int len, int glob
 {
     const int *saved_macro_ptr = macro_ptr;
     int dotid = set_idnum('.', IS_ID);
-#ifndef TCC_TARGET_RISCV64
     int dolid = set_idnum('$', 0);
-#endif
-
     tcc_open_bf(s1, ":asm:", len);
     memcpy(file->buffer, str, len);
     macro_ptr = NULL;
     tcc_assemble_internal(s1, 0, global);
     tcc_close();
-
-#ifndef TCC_TARGET_RISCV64
     set_idnum('$', dolid);
-#endif
     set_idnum('.', dotid);
     macro_ptr = saved_macro_ptr;
 }
@@ -1147,9 +1069,6 @@ static void subst_asm_operands(ASMOperand *operands, int nb_operands,
             if (*str == 'c' || *str == 'n' ||
                 *str == 'b' || *str == 'w' || *str == 'h' || *str == 'k' ||
 		*str == 'q' || *str == 'l' ||
-#ifdef TCC_TARGET_RISCV64
-		*str == 'z' ||
-#endif
 		/* P in GCC would add "@PLT" to symbol refs in PIC mode,
 		   and make literal operands not be decorated with '$'.  */
 		*str == 'P')

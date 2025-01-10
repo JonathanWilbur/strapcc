@@ -61,9 +61,6 @@ static const char help[] =
     "Debugger options:\n"
     "  -g           generate stab runtime debug info\n"
     "  -gdwarf[-x]  generate dwarf runtime debug info\n"
-#ifdef TCC_TARGET_PE
-    "  -g.pdb       create .pdb debug database\n"
-#endif
 #ifdef CONFIG_TCC_BCHECK
     "  -b           compile with built-in memory and bounds checker (implies -g)\n"
 #endif
@@ -79,14 +76,9 @@ static const char help[] =
     "  -M[M]D       generate make dependency file [ignore system files]\n"
     "  -M[M]        as above but no other output\n"
     "  -MF file     specify dependency file name\n"
-#if defined(TCC_TARGET_I386) || defined(TCC_TARGET_X86_64)
     "  -m32/64      defer to i386/x86_64 cross compiler\n"
-#endif
     "Tools:\n"
     "  create library  : tcc -ar [crstvx] lib [files]\n"
-#ifdef TCC_TARGET_PE
-    "  create def file : tcc -impdef lib.dll [-v] [-o lib.def]\n"
-#endif
     ;
 
 static const char help2[] =
@@ -125,12 +117,7 @@ static const char help2[] =
     "  test-coverage                 create code coverage code\n"
     "-m... target specific options:\n"
     "  ms-bitfields                  use MSVC bitfield layout\n"
-#ifdef TCC_TARGET_ARM
-    "  float-abi                     hard/softfp on arm\n"
-#endif
-#ifdef TCC_TARGET_X86_64
     "  no-sse                        disable floats on x86_64\n"
-#endif
     "-Wl,... linker options:\n"
     "  -nostdlib                     do not link with standard crt/libs\n"
     "  -[no-]whole-archive           load lib(s) fully/only as needed\n"
@@ -138,70 +125,18 @@ static const char help2[] =
     "  -export-dynamic               same as -rdynamic\n"
     "  -image-base= -Ttext=          set base address of executable\n"
     "  -section-alignment=           set section alignment in executable\n"
-#ifdef TCC_TARGET_PE
-    "  -file-alignment=              set PE file alignment\n"
-    "  -stack=                       set PE stack reserve\n"
-    "  -large-address-aware          set related PE option\n"
-    "  -subsystem=[console/windows]  set PE subsystem\n"
-    "  -oformat=[pe-* binary]        set executable output format\n"
-    "Predefined macros:\n"
-    "  tcc -E -dM - < nul\n"
-#else
     "  -rpath=                       set dynamic library search path\n"
     "  -enable-new-dtags             set DT_RUNPATH instead of DT_RPATH\n"
     "  -soname=                      set DT_SONAME elf tag\n"
-#if defined(TCC_TARGET_MACHO)
-    "  -install_name=                set DT_SONAME elf tag (soname macOS alias)\n"
-#endif
     "  -Bsymbolic                    set DT_SYMBOLIC elf tag\n"
     "  -oformat=[elf32/64-* binary]  set executable output format\n"
     "  -init= -fini= -Map= -as-needed -O   (ignored)\n"
     "Predefined macros:\n"
     "  tcc -E -dM - < /dev/null\n"
-#endif
     "See also the manual for more details.\n"
     ;
 
-static const char version[] =
-    "tcc version "TCC_VERSION
-#ifdef TCC_GITHASH
-    " "TCC_GITHASH
-#endif
-    " ("
-#ifdef TCC_TARGET_I386
-        "i386"
-#elif defined TCC_TARGET_X86_64
-        "x86_64"
-#elif defined TCC_TARGET_C67
-        "C67"
-#elif defined TCC_TARGET_ARM
-        "ARM"
-# ifdef TCC_ARM_EABI
-        " eabi"
-#  ifdef TCC_ARM_HARDFLOAT
-        "hf"
-#  endif
-# endif
-#elif defined TCC_TARGET_ARM64
-        "AArch64"
-#elif defined TCC_TARGET_RISCV64
-        "riscv64"
-#endif
-#ifdef TCC_TARGET_PE
-        " Windows"
-#elif defined(TCC_TARGET_MACHO)
-        " Darwin"
-#elif TARGETOS_FreeBSD || TARGETOS_FreeBSD_kernel
-        " FreeBSD"
-#elif TARGETOS_OpenBSD
-        " OpenBSD"
-#elif TARGETOS_NetBSD
-        " NetBSD"
-#else
-        " Linux"
-#endif
-    ")\n"
-    ;
+static const char version[] = "tcc version "TCC_VERSION;
 
 static void print_dirs(const char *msg, char **paths, int nb_paths)
 {
@@ -218,10 +153,8 @@ static void print_search_dirs(TCCState *s)
     print_dirs("include", s->sysinclude_paths, s->nb_sysinclude_paths);
     print_dirs("libraries", s->library_paths, s->nb_library_paths);
     printf("libtcc1:\n  %s/%s\n", s->library_paths[0], CONFIG_TCC_CROSSPREFIX TCC_LIBTCC1);
-#if !defined TCC_TARGET_PE && !defined TCC_TARGET_MACHO
     print_dirs("crt", s->crt_paths, s->nb_crt_paths);
     printf("elfinterp:\n  %s\n",  DEFAULT_ELFINTERP(s));
-#endif
 }
 
 static void set_environment(TCCState *s)
@@ -252,14 +185,6 @@ static char *default_outputfile(TCCState *s, const char *first_file)
         name = tcc_basename(first_file);
     snprintf(buf, sizeof(buf), "%s", name);
     ext = tcc_fileextension(buf);
-#ifdef TCC_TARGET_PE
-    if (s->output_type == TCC_OUTPUT_DLL)
-        strcpy(ext, ".dll");
-    else
-    if (s->output_type == TCC_OUTPUT_EXE)
-        strcpy(ext, ".exe");
-    else
-#endif
     if ((s->just_deps || s->output_type == TCC_OUTPUT_OBJ) && !s->option_r && *ext)
         strcpy(ext, ".o");
     else
@@ -310,10 +235,6 @@ redo:
             printf("%s", version);
         if (opt == OPT_AR)
             return tcc_tool_ar(s, argc, argv);
-#ifdef TCC_TARGET_PE
-        if (opt == OPT_IMPDEF)
-            return tcc_tool_impdef(s, argc, argv);
-#endif
         if (opt == OPT_V)
             return 0;
         if (opt == OPT_PRINT_DIRS) {
