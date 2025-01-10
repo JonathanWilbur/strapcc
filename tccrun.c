@@ -86,10 +86,6 @@ static void st_unlink(TCCState *s1);
 #ifdef CONFIG_TCC_BACKTRACE
 static int _tcc_backtrace(rt_frame *f, const char *fmt, va_list ap);
 #endif
-#ifdef _WIN64
-static void *win64_add_function_table(TCCState *s1);
-static void win64_del_function_table(void *);
-#endif
 
 #if !defined PAGESIZE
 # if defined _SC_PAGESIZE
@@ -104,34 +100,11 @@ static void win64_del_function_table(void *);
 
 #define PAGEALIGN(n) ((addr_t)n + (-(addr_t)n & (PAGESIZE-1)))
 
-#if !_WIN32 && !__APPLE__
-//#define CONFIG_SELINUX 1
-#endif
-
 static int rt_mem(TCCState *s1, int size)
 {
     void *ptr;
     int ptr_diff = 0;
-#ifdef CONFIG_SELINUX
-    /* Using mmap instead of malloc */
-    void *prw;
-    char tmpfname[] = "/tmp/.tccrunXXXXXX";
-    int fd = mkstemp(tmpfname);
-    unlink(tmpfname);
-    ftruncate(fd, size);
-
-    ptr = mmap(NULL, size * 2, PROT_READ|PROT_EXEC, MAP_SHARED, fd, 0);
-    /* mmap RW memory at fixed distance */
-    prw = mmap((char*)ptr + size, size, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_FIXED, fd, 0);
-    close(fd);
-    if (ptr == MAP_FAILED || prw == MAP_FAILED)
-	return tcc_error_noabort("tccrun: could not map memory");
-    ptr_diff = (char*)prw - (char*)ptr; /* = size; */
-    //printf("map %p %p %p\n", ptr, prw, (void*)ptr_diff);
-    size *= 2;
-#else
     ptr = tcc_malloc(size += PAGESIZE); /* one extra page to align malloc memory */
-#endif
     s1->run_ptr = ptr;
     s1->run_size = size;
     return ptr_diff;
@@ -185,16 +158,10 @@ ST_FUNC void tcc_run_free(TCCState *s1)
         return;
     st_unlink(s1);
     size = s1->run_size;
-#ifdef CONFIG_SELINUX
-    munmap(ptr, size);
-#else
+
     /* unprotect memory to make it usable for malloc again */
     protect_pages((void*)PAGEALIGN(ptr), size - PAGESIZE, 2 /*rw*/);
-# ifdef _WIN64
-    win64_del_function_table(s1->run_function_table);
-# endif
     tcc_free(ptr);
-#endif
 }
 
 #define RT_EXIT_ZERO 0xE0E00E0E /* passed from longjmp instead of '0' */
@@ -411,9 +378,6 @@ redo:
         goto redo;
     }
     if (copy == 3) {
-#ifdef _WIN64
-        s1->run_function_table = win64_add_function_table(s1);
-#endif
         /* remove local symbols and free sections except symtab */
         cleanup_symbols(s1);
         cleanup_sections(s1);
@@ -466,30 +430,6 @@ static int protect_pages(void *ptr, unsigned long length, int mode)
 #endif
     return 0;
 }
-
-#ifdef _WIN64
-static void *win64_add_function_table(TCCState *s1)
-{
-    void *p = NULL;
-    if (s1->uw_pdata) {
-        p = (void*)s1->uw_pdata->sh_addr;
-        RtlAddFunctionTable(
-            (RUNTIME_FUNCTION*)p,
-            s1->uw_pdata->data_offset / sizeof (RUNTIME_FUNCTION),
-            s1->pe_imagebase
-            );
-        s1->uw_pdata = NULL;
-    }
-    return p;
-}
-
-static void win64_del_function_table(void *p)
-{
-    if (p) {
-        RtlDeleteFunctionTable((RUNTIME_FUNCTION*)p);
-    }
-}
-#endif
 
 static void bt_link(TCCState *s1)
 {
@@ -1181,15 +1121,7 @@ static int rt_error(rt_frame *f, const char *fmt, ...)
 /* translate from ucontext_t* to internal rt_context * */
 static void rt_getcontext(ucontext_t *uc, rt_frame *rc)
 {
-#if defined _WIN64
-    rc->ip = uc->Rip;
-    rc->fp = uc->Rbp;
-    rc->sp = uc->Rsp;
-#elif defined _WIN32
-    rc->ip = uc->Eip;
-    rc->fp = uc->Ebp;
-    rc->sp = uc->Esp;
-#elif defined __i386__
+#if defined __i386__
 # if defined(__APPLE__)
     rc->ip = uc->uc_mcontext->__ss.__eip;
     rc->fp = uc->uc_mcontext->__ss.__ebp;

@@ -77,54 +77,6 @@ ST_DATA void** stk_data;
 ST_DATA int nb_stk_data;
 
 /********************************************************/
-#ifdef _WIN32
-ST_FUNC char *normalize_slashes(char *path)
-{
-    char *p;
-    for (p = path; *p; ++p)
-        if (*p == '\\')
-            *p = '/';
-    return path;
-}
-
-#if defined LIBTCC_AS_DLL && !defined CONFIG_TCCDIR
-static HMODULE tcc_module;
-BOOL WINAPI DllMain (HINSTANCE hDll, DWORD dwReason, LPVOID lpReserved)
-{
-    if (DLL_PROCESS_ATTACH == dwReason)
-        tcc_module = hDll;
-    return TRUE;
-}
-#else
-#define tcc_module NULL /* NULL means executable itself */
-#endif
-
-#ifndef CONFIG_TCCDIR
-/* on win32, we suppose the lib and includes are at the location of 'tcc.exe' */
-static inline char *config_tccdir_w32(char *path)
-{
-    char *p;
-    GetModuleFileNameA(tcc_module, path, MAX_PATH);
-    p = tcc_basename(normalize_slashes(strlwr(path)));
-    if (p > path)
-        --p;
-    *p = 0;
-    return path;
-}
-#define CONFIG_TCCDIR config_tccdir_w32(alloca(MAX_PATH))
-#endif
-
-#ifdef TCC_IS_NATIVE
-static void tcc_add_systemdir(TCCState *s)
-{
-    char buf[1000];
-    GetSystemDirectoryA(buf, sizeof buf);
-    tcc_add_library_path(s, normalize_slashes(buf));
-}
-#endif
-#endif
-
-/********************************************************/
 
 PUB_FUNC void tcc_enter_state(TCCState *s1)
 {
@@ -465,10 +417,6 @@ PUB_FUNC void tcc_memcheck(int d)
 
 #endif /* MEM_DEBUG */
 
-#ifdef _WIN32
-# define realpath(file, buf) _fullpath(buf, file, 260)
-#endif
-
 /* for #pragma once */
 ST_FUNC int normalized_PATHCMP(const char *f1, const char *f2)
 {
@@ -686,9 +634,6 @@ ST_FUNC void tcc_open_bf(TCCState *s1, const char *filename, int initlen)
     bf->buf_end = bf->buffer + initlen;
     bf->buf_end[0] = CH_EOB; /* put eob symbol */
     pstrcpy(bf->filename, sizeof(bf->filename), filename);
-#ifdef _WIN32
-    normalize_slashes(bf->filename);
-#endif
     bf->true_filename = bf->filename;
     bf->line_num = 1;
     bf->ifdef_stack_ptr = s1->ifdef_stack_ptr;
@@ -982,42 +927,11 @@ ST_FUNC DLLReference *tcc_add_dllref(TCCState *s1, const char *dllname, int leve
     return ref;
 }
 
-/* OpenBSD: choose latest from libxxx.so.x.y versions */
-#if defined TARGETOS_OpenBSD && !defined _WIN32
-#include <glob.h>
-static int tcc_glob_so(TCCState *s1, const char *pattern, char *buf, int size)
-{
-    const char *star;
-    glob_t g;
-    char *p;
-    int i, v, v1, v2, v3;
-
-    star = strchr(pattern, '*');
-    if (!star || glob(pattern, 0, NULL, &g))
-        return -1;
-    for (v = -1, i = 0; i < g.gl_pathc; ++i) {
-        p = g.gl_pathv[i];
-        if (2 != sscanf(p + (star - pattern), "%d.%d.%d", &v1, &v2, &v3))
-            continue;
-        if ((v1 = v1 * 1000 + v2) > v)
-            v = v1, pstrcpy(buf, size, p);
-    }
-    globfree(&g);
-    return v;
-}
-#endif
-
 static int guess_filetype(const char *filename);
 
 ST_FUNC int tcc_add_file_internal(TCCState *s1, const char *filename, int flags)
 {
     int fd, ret = -1;
-
-#if defined TARGETOS_OpenBSD && !defined _WIN32
-    char buf[1024];
-    if (tcc_glob_so(s1, filename, buf, sizeof buf) >= 0)
-        filename = buf;
-#endif
 
     if (0 == (flags & AFF_TYPE_MASK))
         flags |= guess_filetype(filename);

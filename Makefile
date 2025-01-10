@@ -127,7 +127,7 @@ PROGS = tcc$(EXESUF)
 TCCLIBS = $(LIBTCCDEF) $(LIBTCC) $(LIBTCC1)
 TCCDOCS = tcc.1 tcc-doc.html tcc-doc.info
 
-all: $(PROGS) $(TCCLIBS) $(TCCDOCS)
+all: $(PROGS) $(TCCLIBS)
 
 # cross compiler targets to build
 TCC_X = i386 x86_64 i386-win32 x86_64-win32 x86_64-osx arm arm64 arm-wince c67
@@ -332,22 +332,6 @@ run-if = $(if $(shell $(call WHICH,$1)),$S $1 $2)
 S = $(if $(findstring yes,$(SILENT)),@$(info * $@))
 
 # --------------------------------------------------------------------------
-# documentation and man page
-tcc-doc.html: tcc-doc.texi
-	$(call run-if,makeinfo,--no-split --html --number-sections -o $@ $<)
-
-tcc-doc.info: tcc-doc.texi
-	$(call run-if,makeinfo,$< || true)
-
-tcc.1 : tcc-doc.pod
-	$(call run-if,pod2man,--section=1 --center="Tiny C Compiler" \
-		--release="$(VERSION)" $< >$@)
-%.pod : %.texi
-	$(call run-if,perl,$(TOPSRC)/texi2pod.pl $< $@)
-
-doc : $(TCCDOCS)
-
-# --------------------------------------------------------------------------
 # install
 
 INSTALL = install -m644
@@ -476,7 +460,6 @@ clean:
 
 distclean: clean
 	@rm -vf config.h config.mak config.texi
-	@rm -vf $(TCCDOCS)
 
 .PHONY: all clean test tar tags ETAGS doc distclean install uninstall FORCE
 

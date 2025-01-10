@@ -3552,33 +3552,12 @@ ST_INLN void unget_tok(int last_tok)
 /* ------------------------------------------------------------------------- */
 /* init preprocessor */
 
+// TODO: I am not sure this is right...
 static const char * const target_os_defs =
-#ifdef TCC_TARGET_PE
-    "_WIN32\0"
-# if PTR_SIZE == 8
-    "_WIN64\0"
-# endif
-#else
-# if defined TCC_TARGET_MACHO
-    "__APPLE__\0"
-# elif TARGETOS_FreeBSD
-    "__FreeBSD__ 12\0"
-# elif TARGETOS_FreeBSD_kernel
-    "__FreeBSD_kernel__\0"
-# elif TARGETOS_NetBSD
-    "__NetBSD__\0"
-# elif TARGETOS_OpenBSD
-    "__OpenBSD__\0"
-# else
     "__linux__\0"
     "__linux\0"
-#  if TARGETOS_ANDROID
-    "__ANDROID__\0"
-#  endif
-# endif
     "__unix__\0"
     "__unix\0"
-#endif
     ;
 
 static void putdef(CString *cs, const char *p)

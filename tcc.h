@@ -39,7 +39,6 @@
 #include <setjmp.h>
 #include <time.h>
 
-#ifndef _WIN32
 # include <unistd.h>
 # include <sys/time.h>
 # ifndef CONFIG_TCC_STATIC
@@ -48,48 +47,6 @@
 /* XXX: need to define this to use them in non ISOC99 context */
 extern float strtof (const char *__nptr, char **__endptr);
 extern long double strtold (const char *__nptr, char **__endptr);
-#endif
-
-#ifdef _WIN32
-# define WIN32_LEAN_AND_MEAN 1
-# include <windows.h>
-# include <io.h> /* open, close etc. */
-# include <direct.h> /* getcwd */
-# include <malloc.h> /* alloca */
-# ifdef __GNUC__
-#  include <stdint.h>
-# endif
-# define inline __inline
-# define snprintf _snprintf
-# define vsnprintf _vsnprintf
-# ifndef __GNUC__
-#  define strtold (long double)strtod
-#  define strtof (float)strtod
-#  define strtoll _strtoi64
-#  define strtoull _strtoui64
-# endif
-# ifdef LIBTCC_AS_DLL
-#  define LIBTCCAPI __declspec(dllexport)
-#  define PUB_FUNC LIBTCCAPI
-# endif
-# ifdef _MSC_VER
-#  pragma warning (disable : 4244)  // conversion from 'uint64_t' to 'int', possible loss of data
-#  pragma warning (disable : 4267)  // conversion from 'size_t' to 'int', possible loss of data
-#  pragma warning (disable : 4996)  // The POSIX name for this item is deprecated. Instead, use the ISO C and C++ conformant name
-#  pragma warning (disable : 4018)  // signed/unsigned mismatch
-#  pragma warning (disable : 4146)  // unary minus operator applied to unsigned type, result still unsigned
-#  define ssize_t intptr_t
-#  ifdef _X86_
-#   define __i386__ 1
-#  endif
-#  ifdef _AMD64_
-#   define __x86_64__ 1
-#  endif
-# endif
-# ifndef va_copy
-#  define va_copy(a,b) a = b
-# endif
-#endif
 
 #ifndef O_BINARY
 # define O_BINARY 0
@@ -113,17 +70,10 @@ extern long double strtold (const char *__nptr, char **__endptr);
 # define PRINTF_LIKE(x,y) __attribute__ ((format (printf, (x), (y))))
 #endif
 
-#ifdef _WIN32
-# define IS_DIRSEP(c) (c == '/' || c == '\\')
-# define IS_ABSPATH(p) (IS_DIRSEP(p[0]) || (p[0] && p[1] == ':' && IS_DIRSEP(p[2])))
-# define PATHCMP stricmp
-# define PATHSEP ";"
-#else
 # define IS_DIRSEP(c) (c == '/')
 # define IS_ABSPATH(p) IS_DIRSEP(p[0])
 # define PATHCMP strcmp
 # define PATHSEP ":"
-#endif
 
 /* -------------------------------------------- */
 
@@ -163,12 +113,6 @@ extern long double strtold (const char *__nptr, char **__endptr);
 #  define TCC_TARGET_RISCV64
 # else
 #  define TCC_TARGET_I386
-# endif
-# ifdef _WIN32
-#  define TCC_TARGET_PE 1
-# endif
-# ifdef __APPLE__
-#  define TCC_TARGET_MACHO 1
 # endif
 #endif
 
@@ -229,11 +173,6 @@ extern long double strtold (const char *__nptr, char **__endptr);
 
 #ifdef CONFIG_TCC_PIE
 # define CONFIG_TCC_PIC 1
-#endif
-
-/* support using libtcc from threads */
-#ifndef CONFIG_TCC_SEMLOCK
-# define CONFIG_TCC_SEMLOCK 1
 #endif
 
 /* ------------ path configuration ------------ */
@@ -965,9 +904,6 @@ struct TCCState {
     const char *run_main; /* entry for tcc_run() */
     void *run_ptr; /* runtime_memory */
     unsigned run_size; /* size of runtime_memory  */
-#ifdef _WIN64
-    void *run_function_table; /* unwind data */
-#endif
     struct TCCState *next;
     struct rt_context *rc; /* pointer to backtrace info block */
     void *run_lj, *run_jb; /* sj/lj for tcc_setjmp()/tcc_run() */
@@ -1905,48 +1841,9 @@ ST_FUNC void tcc_tcov_reset_ind(TCCState *s1);
 #endif
 
 /********************************************************/
-#if CONFIG_TCC_SEMLOCK
-#if defined _WIN32
-typedef struct { int init; CRITICAL_SECTION cs; } TCCSem;
-static inline void wait_sem(TCCSem *p) {
-    if (!p->init)
-        InitializeCriticalSection(&p->cs), p->init = 1;
-    EnterCriticalSection(&p->cs);
-}
-static inline void post_sem(TCCSem *p) {
-    LeaveCriticalSection(&p->cs);
-}
-#elif defined __APPLE__
-#include <dispatch/dispatch.h>
-typedef struct { int init; dispatch_semaphore_t sem; } TCCSem;
-static inline void wait_sem(TCCSem *p) {
-    if (!p->init)
-        p->sem = dispatch_semaphore_create(1), p->init = 1;
-    dispatch_semaphore_wait(p->sem, DISPATCH_TIME_FOREVER);
-}
-static inline void post_sem(TCCSem *p) {
-    dispatch_semaphore_signal(p->sem);
-}
-#else
-#include <semaphore.h>
-typedef struct { int init; sem_t sem; } TCCSem;
-static inline void wait_sem(TCCSem *p) {
-    if (!p->init)
-        sem_init(&p->sem, 0, 1), p->init = 1;
-    while (sem_wait(&p->sem) < 0 && errno == EINTR);
-}
-static inline void post_sem(TCCSem *p) {
-    sem_post(&p->sem);
-}
-#endif
-#define TCC_SEM(s) TCCSem s
-#define WAIT_SEM wait_sem
-#define POST_SEM post_sem
-#else
 #define TCC_SEM(s)
 #define WAIT_SEM(p)
 #define POST_SEM(p)
-#endif
 
 /********************************************************/
 #undef ST_DATA

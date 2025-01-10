@@ -1,6 +1,10 @@
 Tiny C Compiler - C Scripting Everywhere - The Smallest ANSI C compiler
 -----------------------------------------------------------------------
 
+TODO:
+
+- [ ] Get rid of -run support
+
 Features:
 --------
 

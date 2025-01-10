@@ -8286,11 +8286,6 @@ static void decl_initializer_alloc(CType *type, AttributeDef *ad, int r,
 
         vpush_type_size(type, &a);
         gen_vla_alloc(type, a);
-#if defined TCC_TARGET_PE && defined TCC_TARGET_X86_64
-        /* on _WIN64, because of the function args scratch area, the
-           result of alloca differs from RSP and is returned in RAX.  */
-        gen_vla_result(addr), addr = (loc -= PTR_SIZE);
-#endif
         gen_vla_sp_save(addr);
         cur_scope->vla.loc = addr;
         cur_scope->vla.num++;
