@@ -3,9 +3,9 @@ Tiny C Compiler - C Scripting Everywhere - The Smallest ANSI C compiler
 
 TODO:
 
-- [ ] Get rid of -run support
+- [x] Get rid of -run support
   - Remove everything that runs if `TCC_IS_NATIVE`
-- [ ] Get rid of `_WIN32`, `__APPLE__`, etc.
+- [x] Get rid of `_WIN32`, `__APPLE__`, etc.
 - [ ] Comment, label, and rename everything so it is extremely understandable.
 - [ ] `tcc_print_stats`
 - [ ] Can I get rid of _some_ of the i386 stuff?
@@ -14,10 +14,13 @@ TODO:
 - [ ] Every `TARGETOS_*` value
 - [ ] Remove `CONFIG_TCC_BCHECK`
 - [ ] What is `ONE_SOURCE`?
-- [ ] Every `#if 0`
+- [x] Every `#if 0`
 - [ ] Every `PTR_SIZE` other than `8`
 - [ ] Can I get rid of `TARGET_DEFS_ONLY`?
 - [ ] `CONFIG_TCC_BACKTRACE`?
+- [ ] `INC_DEBUG`
+- [ ] `TCC_LIBGCC`
+- [ ] Could you get rid of debugging support by getting rid of `tccdbg.c`?
 
 Features:
 --------

@@ -190,13 +190,6 @@
 
 /* pragma */
      DEF(TOK_pack, "pack")
-#if !defined(TCC_TARGET_I386) && !defined(TCC_TARGET_X86_64) && \
-    !defined(TCC_TARGET_ARM) && !defined(TCC_TARGET_ARM64) && \
-    !defined(TCC_TARGET_RISCV64)
-     /* already defined for assembler */
-     DEF(TOK_ASM_push, "push")
-     DEF(TOK_ASM_pop, "pop")
-#endif
      DEF(TOK_comment, "comment")
      DEF(TOK_lib, "lib")
      DEF(TOK_push_macro, "push_macro")
@@ -225,97 +218,7 @@
      DEF(TOK___fixunssfdi, "__fixunssfdi")
      DEF(TOK___fixunsdfdi, "__fixunsdfdi")
 #endif
-
-#if defined TCC_TARGET_ARM
-# ifdef TCC_ARM_EABI
-     DEF(TOK_memcpy, "__aeabi_memcpy")
-     DEF(TOK_memmove, "__aeabi_memmove")
-     DEF(TOK_memmove4, "__aeabi_memmove4")
-     DEF(TOK_memmove8, "__aeabi_memmove8")
-     DEF(TOK_memset, "__aeabi_memset")
-     DEF(TOK___aeabi_ldivmod, "__aeabi_ldivmod")
-     DEF(TOK___aeabi_uldivmod, "__aeabi_uldivmod")
-     DEF(TOK___aeabi_idivmod, "__aeabi_idivmod")
-     DEF(TOK___aeabi_uidivmod, "__aeabi_uidivmod")
-     DEF(TOK___divsi3, "__aeabi_idiv")
-     DEF(TOK___udivsi3, "__aeabi_uidiv")
-     DEF(TOK___floatdisf, "__aeabi_l2f")
-     DEF(TOK___floatdidf, "__aeabi_l2d")
-     DEF(TOK___fixsfdi, "__aeabi_f2lz")
-     DEF(TOK___fixdfdi, "__aeabi_d2lz")
-     DEF(TOK___ashrdi3, "__aeabi_lasr")
-     DEF(TOK___lshrdi3, "__aeabi_llsr")
-     DEF(TOK___ashldi3, "__aeabi_llsl")
-     DEF(TOK___floatundisf, "__aeabi_ul2f")
-     DEF(TOK___floatundidf, "__aeabi_ul2d")
-     DEF(TOK___fixunssfdi, "__aeabi_f2ulz")
-     DEF(TOK___fixunsdfdi, "__aeabi_d2ulz")
-# else
-     DEF(TOK___modsi3, "__modsi3")
-     DEF(TOK___umodsi3, "__umodsi3")
-     DEF(TOK___divsi3, "__divsi3")
-     DEF(TOK___udivsi3, "__udivsi3")
-     DEF(TOK___floatdisf, "__floatdisf")
-     DEF(TOK___floatdidf, "__floatdidf")
-#  ifndef TCC_ARM_VFP
-     DEF(TOK___floatdixf, "__floatdixf")
-     DEF(TOK___fixunssfsi, "__fixunssfsi")
-     DEF(TOK___fixunsdfsi, "__fixunsdfsi")
-     DEF(TOK___fixunsxfsi, "__fixunsxfsi")
-     DEF(TOK___fixxfdi, "__fixxfdi")
-#  endif
-     DEF(TOK___fixsfdi, "__fixsfdi")
-     DEF(TOK___fixdfdi, "__fixdfdi")
-# endif
-#endif
-
-#if defined TCC_TARGET_C67
-     DEF(TOK__divi, "_divi")
-     DEF(TOK__divu, "_divu")
-     DEF(TOK__divf, "_divf")
-     DEF(TOK__divd, "_divd")
-     DEF(TOK__remi, "_remi")
-     DEF(TOK__remu, "_remu")
-#endif
-
-#if defined TCC_TARGET_I386
-     DEF(TOK___fixsfdi, "__fixsfdi")
-     DEF(TOK___fixdfdi, "__fixdfdi")
-     DEF(TOK___fixxfdi, "__fixxfdi")
-#endif
-
-#if defined TCC_TARGET_I386 || defined TCC_TARGET_X86_64
      DEF(TOK_alloca, "alloca")
-#endif
-
-#if defined TCC_TARGET_PE
-     DEF(TOK___chkstk, "__chkstk")
-#endif
-#if defined TCC_TARGET_ARM64 || defined TCC_TARGET_RISCV64
-     DEF(TOK___arm64_clear_cache, "__arm64_clear_cache")
-     DEF(TOK___addtf3, "__addtf3")
-     DEF(TOK___subtf3, "__subtf3")
-     DEF(TOK___multf3, "__multf3")
-     DEF(TOK___divtf3, "__divtf3")
-     DEF(TOK___extendsftf2, "__extendsftf2")
-     DEF(TOK___extenddftf2, "__extenddftf2")
-     DEF(TOK___trunctfsf2, "__trunctfsf2")
-     DEF(TOK___trunctfdf2, "__trunctfdf2")
-     DEF(TOK___fixtfsi, "__fixtfsi")
-     DEF(TOK___fixtfdi, "__fixtfdi")
-     DEF(TOK___fixunstfsi, "__fixunstfsi")
-     DEF(TOK___fixunstfdi, "__fixunstfdi")
-     DEF(TOK___floatsitf, "__floatsitf")
-     DEF(TOK___floatditf, "__floatditf")
-     DEF(TOK___floatunsitf, "__floatunsitf")
-     DEF(TOK___floatunditf, "__floatunditf")
-     DEF(TOK___eqtf2, "__eqtf2")
-     DEF(TOK___netf2, "__netf2")
-     DEF(TOK___lttf2, "__lttf2")
-     DEF(TOK___letf2, "__letf2")
-     DEF(TOK___gttf2, "__gttf2")
-     DEF(TOK___getf2, "__getf2")
-#endif
 
 /* bound checking symbols */
 #ifdef CONFIG_TCC_BCHECK
@@ -332,20 +235,13 @@
      DEF(TOK___bound_setjmp, "__bound_setjmp")
      DEF(TOK___bound_longjmp, "__bound_longjmp")
      DEF(TOK___bound_new_region, "__bound_new_region")
-# ifdef TCC_TARGET_PE
-#  ifdef TCC_TARGET_X86_64
-     DEF(TOK___bound_alloca_nr, "__bound_alloca_nr")
-#  endif
-# else
      DEF(TOK_sigsetjmp, "sigsetjmp")
      DEF(TOK___sigsetjmp, "__sigsetjmp")
      DEF(TOK_siglongjmp, "siglongjmp")
-# endif
      DEF(TOK_setjmp, "setjmp")
      DEF(TOK__setjmp, "_setjmp")
      DEF(TOK_longjmp, "longjmp")
 #endif
-
 
 /*********************************************************************/
 /* Tiny Assembler */
@@ -386,28 +282,11 @@
  DEF_ASMDIR(endr)
  DEF_ASMDIR(org)
  DEF_ASMDIR(quad)
-#if defined(TCC_TARGET_I386)
- DEF_ASMDIR(code16)
- DEF_ASMDIR(code32)
-#elif defined(TCC_TARGET_X86_64)
  DEF_ASMDIR(code64)
-#elif defined(TCC_TARGET_RISCV64)
- DEF_ASMDIR(option)
-#endif
  DEF_ASMDIR(short)
  DEF_ASMDIR(long)
  DEF_ASMDIR(int)
  DEF_ASMDIR(symver)
  DEF_ASMDIR(section)    /* must be last directive */
 
-#if defined TCC_TARGET_I386 || defined TCC_TARGET_X86_64
 #include "i386-tok.h"
-#endif
-
-#if defined TCC_TARGET_ARM || defined TCC_TARGET_ARM64
-#include "arm-tok.h"
-#endif
-
-#if defined TCC_TARGET_RISCV64
-#include "riscv64-tok.h"
-#endif

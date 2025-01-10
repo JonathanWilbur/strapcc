@@ -233,13 +233,8 @@ static int R_RET(int t)
 {
     if (!is_float(t))
         return REG_IRET;
-#ifdef TCC_TARGET_X86_64
     if ((t & VT_BTYPE) == VT_LDOUBLE)
         return TREG_ST0;
-#elif defined TCC_TARGET_RISCV64
-    if ((t & VT_BTYPE) == VT_LDOUBLE)
-        return REG_IRET;
-#endif
     return REG_FRET;
 }
 
@@ -247,18 +242,10 @@ static int R_RET(int t)
 static int R2_RET(int t)
 {
     t &= VT_BTYPE;
-#if PTR_SIZE == 4
-    if (t == VT_LLONG)
-        return REG_IRE2;
-#elif defined TCC_TARGET_X86_64
     if (t == VT_QLONG)
         return REG_IRE2;
     if (t == VT_QFLOAT)
         return REG_FRE2;
-#elif defined TCC_TARGET_RISCV64
-    if (t == VT_LDOUBLE)
-        return REG_IRE2;
-#endif
     return VT_CONST;
 }
 
@@ -282,15 +269,10 @@ static int RC_TYPE(int t)
 {
     if (!is_float(t))
         return RC_INT;
-#ifdef TCC_TARGET_X86_64
     if ((t & VT_BTYPE) == VT_LDOUBLE)
         return RC_ST0;
     if ((t & VT_BTYPE) == VT_QFLOAT)
         return RC_FRET;
-#elif defined TCC_TARGET_RISCV64
-    if ((t & VT_BTYPE) == VT_LDOUBLE)
-        return RC_INT;
-#endif
     return RC_FLOAT;
 }
 
@@ -323,10 +305,7 @@ ST_FUNC int ieee_finite(double d)
 }
 
 /* compiling intel long double natively */
-#if (defined __i386__ || defined __x86_64__) \
-    && (defined TCC_TARGET_I386 || defined TCC_TARGET_X86_64)
-# define TCC_IS_NATIVE_387
-#endif
+#define TCC_IS_NATIVE_387
 
 ST_FUNC void test_lvalue(void)
 {
@@ -340,19 +319,6 @@ ST_FUNC void check_vstack(void)
         tcc_error("internal compiler error: vstack leak (%d)",
                   (int)(vtop - vstack + 1));
 }
-
-/* vstack debugging aid */
-#if 0
-void pv (const char *lbl, int a, int b)
-{
-    int i;
-    for (i = a; i < a + b; ++i) {
-        SValue *p = &vtop[-i];
-        printf("%s vtop[-%d] : type.t:%04x  r:%04x  r2:%04x  c.i:%d\n",
-            lbl, i, p->type.t, p->r, p->r2, (int)p->c.i);
-    }
-}
-#endif
 
 /* ------------------------------------------------------------------------- */
 /* initialize vstack and types.  This must be done also for tcc -E */
@@ -390,9 +356,6 @@ ST_FUNC int tccgen_compile(TCCState *s1)
 
     tcc_debug_start(s1);
     tcc_tcov_start (s1);
-#ifdef TCC_TARGET_ARM
-    arm_init(s1);
-#endif
 #ifdef INC_DEBUG
     printf("%s: **** new file\n", file->filename);
 #endif
@@ -467,23 +430,6 @@ ST_FUNC void update_storage(Sym *sym)
     if (sym_bind != old_sym_bind) {
         esym->st_info = ELFW(ST_INFO)(sym_bind, ELFW(ST_TYPE)(esym->st_info));
     }
-
-#ifdef TCC_TARGET_PE
-    if (sym->a.dllimport)
-        esym->st_other |= ST_PE_IMPORT;
-    if (sym->a.dllexport)
-        esym->st_other |= ST_PE_EXPORT;
-#endif
-
-#if 0
-    printf("storage %s: bind=%c vis=%d exp=%d imp=%d\n",
-        get_tok_str(sym->v, NULL),
-        sym_bind == STB_WEAK ? 'w' : sym_bind == STB_LOCAL ? 'l' : 'g',
-        sym->a.visibility,
-        sym->a.dllexport,
-        sym->a.dllimport
-        );
-#endif
 }
 
 /* ------------------------------------------------------------------------- */
@@ -516,22 +462,6 @@ ST_FUNC void put_extern_sym2(Sym *sym, int sh_num,
         else
             sym_bind = STB_GLOBAL;
         other = 0;
-
-#ifdef TCC_TARGET_PE
-        if (sym_type == STT_FUNC && sym->type.ref) {
-            Sym *ref = sym->type.ref;
-            if (ref->a.nodecorate) {
-                can_add_underscore = 0;
-            }
-            if (ref->f.func_call == FUNC_STDCALL && can_add_underscore) {
-                sprintf(buf1, "_%s@%d", name, ref->f.func_args * PTR_SIZE);
-                name = buf1;
-                other |= ST_PE_STDCALL;
-                can_add_underscore = 0;
-            }
-        }
-#endif
-
         if (sym->asm_label) {
             name = get_tok_str(sym->asm_label, NULL);
             can_add_underscore = 0;
@@ -882,13 +812,10 @@ ST_FUNC void vpop(void)
 {
     int v;
     v = vtop->r & VT_VALMASK;
-#if defined(TCC_TARGET_I386) || defined(TCC_TARGET_X86_64)
     /* for x86, we need to pop the FP stack */
     if (v == TREG_ST0) {
         o(0xd8dd); /* fstp %st(0) */
-    } else
-#endif
-    if (v == VT_CMP) {
+    } else if (v == VT_CMP) {
         /* need to put correct jump if && or || without test */
         gsym(vtop->jtrue);
         gsym(vtop->jfalse);
@@ -1266,12 +1193,6 @@ static void patch_storage(Sym *sym, AttributeDef *ad, CType *type)
 {
     if (type)
         patch_type(sym, type);
-
-#ifdef TCC_TARGET_PE
-    if (sym->a.dllimport != ad->a.dllimport)
-        tcc_error("incompatible dll linkage for redefinition of '%s'",
-            get_tok_str(sym->v, NULL));
-#endif
     merge_symattr(&sym->a, &ad->a);
     if (ad->asm_label)
         sym->asm_label = ad->asm_label;
@@ -1375,12 +1296,10 @@ ST_FUNC void save_reg_upstack(int r, int n)
                 sv.r = VT_LOCAL | VT_LVAL;
                 sv.c.i = l;
                 store(p->r & VT_VALMASK, &sv);
-#if defined(TCC_TARGET_I386) || defined(TCC_TARGET_X86_64)
                 /* x86 specific: need to pop fp register ST0 if saved */
                 if (r == TREG_ST0) {
                     o(0xd8dd); /* fstp %st(0) */
                 }
-#endif
                 /* special long long case */
                 if (p->r2 < VT_CONST && USING_TWO_WORDS(bt)) {
                     sv.c.i += PTR_SIZE;
@@ -3294,9 +3213,7 @@ error:
             /* RISC-V keeps 32bit vals in registers sign-extended.
                So here we need a sign-extension for signed types and
                zero-extension. for unsigned types. */
-#if !defined(TCC_TARGET_RISCV64)
             trunc = 32; /* zero upper 32 bits for non RISC-V targets */
-#endif
         } else {
             ss = 4;
         }
@@ -3304,12 +3221,10 @@ error:
 
         if (ds >= ss)
             goto done;
-#if defined TCC_TARGET_I386 || defined TCC_TARGET_X86_64 || defined TCC_TARGET_ARM64
         if (ss == 4) {
             gen_cvt_csti(dbt);
             goto done;
         }
-#endif
         bits = (ss - ds) * 8;
         /* for unsigned, gen_op will convert SAR to SHR */
         vtop->type.t = (ss == 8 ? VT_LLONG : VT_INT) | (dbt & VT_UNSIGNED);
@@ -3356,12 +3271,7 @@ ST_FUNC int type_size(CType *type, int *a)
         *a = LDOUBLE_ALIGN;
         return LDOUBLE_SIZE;
     } else if (bt == VT_DOUBLE || bt == VT_LLONG) {
-#if (defined TCC_TARGET_I386 && !defined TCC_TARGET_PE) \
- || (defined TCC_TARGET_ARM && !defined TCC_ARM_EABI)
-        *a = 4;
-#else
         *a = 8;
-#endif
         return 8;
     } else if (bt == VT_INT || bt == VT_FLOAT) {
         *a = 4;
@@ -4164,11 +4074,7 @@ static void struct_layout(CType *type, AttributeDef *ad)
         bit_pos = BIT_POS(f->type.t);
         size = type_size(&f->type, &align);
 
-        if (bit_pos + bit_size <= size * 8 && f->c + size <= c
-#ifdef TCC_TARGET_ARM
-            && !(f->c & (align - 1))
-#endif
-            )
+        if (bit_pos + bit_size <= size * 8 && f->c + size <= c)
             continue;
 
         /* try to access the field using a different type */
@@ -4195,9 +4101,6 @@ static void struct_layout(CType *type, AttributeDef *ad)
         }
 
         if (px + bit_size <= s * 8 && cx + s <= c
-#ifdef TCC_TARGET_ARM
-            && !(cx & (align - 1))
-#endif
             ) {
             /* update offset and bit position */
             f->c = cx;
@@ -4577,13 +4480,6 @@ static int parse_btype(CType *type, AttributeDef *ad, int ignore_label)
             }
             next();
             break;
-#ifdef TCC_TARGET_ARM64
-        case TOK_UINT128:
-            /* GCC's __uint128_t appears in some Linux header files. Make it a
-               synonym for long double to get the size and alignment right. */
-            u = VT_LDOUBLE;
-            goto basic_type;
-#endif
         case TOK_BOOL:
             u = VT_BOOL;
             goto basic_type;
@@ -5381,10 +5277,6 @@ ST_FUNC void unary(void)
         next();
         goto tok_next;
     case TOK_LCHAR:
-#ifdef TCC_TARGET_PE
-        t = VT_SHORT|VT_UNSIGNED;
-        goto push_tokc;
-#endif
     case TOK_CINT:
     case TOK_CCHAR: 
 	t = VT_INT;
@@ -5433,11 +5325,7 @@ ST_FUNC void unary(void)
         tokc.str.data = tokcstr.data;
         goto case_TOK_STR;
     case TOK_LSTR:
-#ifdef TCC_TARGET_PE
-        t = VT_SHORT | VT_UNSIGNED;
-#else
         t = VT_INT;
-#endif
         goto str_init;
     case TOK_STR:
     case_TOK_STR:
@@ -5645,92 +5533,24 @@ ST_FUNC void unary(void)
             mk_pointer(&type);
             vset(&type, VT_LOCAL, 0);       /* local frame */
             while (level--) {
-#ifdef TCC_TARGET_RISCV64
-                vpushi(2*PTR_SIZE);
-                gen_op('-');
-#endif
                 mk_pointer(&vtop->type);
                 indir();                    /* -> parent frame */
             }
             if (tok1 == TOK_builtin_return_address) {
                 // assume return address is just above frame pointer on stack
-#ifdef TCC_TARGET_ARM
-                vpushi(2*PTR_SIZE);
-                gen_op('+');
-#elif defined TCC_TARGET_RISCV64
-                vpushi(PTR_SIZE);
-                gen_op('-');
-#else
                 vpushi(PTR_SIZE);
                 gen_op('+');
-#endif
                 mk_pointer(&vtop->type);
                 indir();
             }
         }
         break;
-#ifdef TCC_TARGET_RISCV64
-    case TOK_builtin_va_start:
-        parse_builtin_params(0, "ee");
-        r = vtop->r & VT_VALMASK;
-        if (r == VT_LLOCAL)
-            r = VT_LOCAL;
-        if (r != VT_LOCAL)
-            tcc_error("__builtin_va_start expects a local variable");
-        gen_va_start();
-	vstore();
-        break;
-#endif
-#ifdef TCC_TARGET_X86_64
-#ifdef TCC_TARGET_PE
-    case TOK_builtin_va_start:
-	parse_builtin_params(0, "ee");
-        r = vtop->r & VT_VALMASK;
-        if (r == VT_LLOCAL)
-            r = VT_LOCAL;
-        if (r != VT_LOCAL)
-            tcc_error("__builtin_va_start expects a local variable");
-        vtop->r = r;
-	vtop->type = char_pointer_type;
-	vtop->c.i += 8;
-	vstore();
-        break;
-#else
     case TOK_builtin_va_arg_types:
-	parse_builtin_params(0, "t");
-	vpushi(classify_x86_64_va_arg(&vtop->type));
-	vswap();
-	vpop();
-	break;
-#endif
-#endif
-
-#ifdef TCC_TARGET_ARM64
-    case TOK_builtin_va_start: {
-	parse_builtin_params(0, "ee");
-        //xx check types
-        gen_va_start();
-        vpushi(0);
-        vtop->type.t = VT_VOID;
+        parse_builtin_params(0, "t");
+        vpushi(classify_x86_64_va_arg(&vtop->type));
+        vswap();
+        vpop();
         break;
-    }
-    case TOK_builtin_va_arg: {
-	parse_builtin_params(0, "et");
-	type = vtop->type;
-	vpop();
-        //xx check types
-        gen_va_arg(&type);
-        vtop->type = type;
-        break;
-    }
-    case TOK___arm64_clear_cache: {
-	parse_builtin_params(0, "ee");
-        gen_clear_cache();
-        vpushi(0);
-        vtop->type.t = VT_VOID;
-        break;
-    }
-#endif
 
     /* atomic operations */
     case TOK___atomic_store:
@@ -5908,13 +5728,6 @@ special_math_val:
 
         if (r & VT_SYM) {
             vtop->c.i = 0;
-#ifdef TCC_TARGET_PE
-            if (s->a.dllimport) {
-                mk_pointer(&vtop->type);
-                vtop->r |= VT_LVAL;
-                indir();
-            }
-#endif
         } else if (r == VT_CONST && IS_ENUM_VAL(s->type.t)) {
             vtop->c.i = s->enum_val;
         }
@@ -5994,15 +5807,6 @@ special_math_val:
                 if (ret_nregs <= 0) {
                     /* get some space for the returned structure */
                     size = type_size(&s->type, &align);
-#ifdef TCC_TARGET_ARM64
-                /* On arm64, a small struct is return in registers.
-                   It is much easier to write it to memory if we know
-                   that we are allowed to write some extra bytes, so
-                   round the allocated space up to a power of 2: */
-                if (size < 16)
-                    while (size & (size - 1))
-                        size = (size | (size - 1)) + 1;
-#endif
                     loc = (loc - size) & -align;
                     ret.type = s->type;
                     ret.r = VT_LOCAL | VT_LVAL;
@@ -6072,9 +5876,6 @@ special_math_val:
 
             if (ret_nregs < 0) {
                 vsetc(&ret.type, ret.r, &ret.c);
-#ifdef TCC_TARGET_RISCV64
-                arch_transfer_ret_regs(1);
-#endif
             } else {
                 /* return value */
                 n = ret_nregs;
@@ -6560,7 +6361,6 @@ ST_FUNC int expr_const(void)
 /* ------------------------------------------------------------------------- */
 /* return from function */
 
-#ifndef TCC_TARGET_ARM64
 static void gfunc_return(CType *func_type)
 {
     if ((func_type->t & VT_BTYPE) == VT_STRUCT) {
@@ -6616,7 +6416,6 @@ static void gfunc_return(CType *func_type)
     }
     vtop--; /* NOT vpop() because on x86 it would flush the fp stack */
 }
-#endif
 
 static void check_func_return(void)
 {
@@ -8415,13 +8214,6 @@ static int decl(int l)
             type = btype;
 	    ad = adbase;
             type_decl(&type, &ad, &v, TYPE_DIRECT);
-#if 0
-            {
-                char buf[500];
-                type_to_str(buf, sizeof(buf), &type, get_tok_str(v, NULL));
-                printf("type = '%s'\n", buf);
-            }
-#endif
             if ((type.t & VT_BTYPE) == VT_FUNC) {
                 if ((type.t & VT_STATIC) && (l != VT_CONST))
                     tcc_error("function without file scope cannot be static");
@@ -8452,12 +8244,6 @@ static int decl(int l)
                 ad.asm_label = asm_label_instr();
                 /* parse one last attribute list, after asm label */
                 parse_attribute(&ad);
-            #if 0
-                /* gcc does not allow __asm__("label") with function definition,
-                   but why not ... */
-                if (tok == '{')
-                    expect(";");
-            #endif
             }
 
             if (tok == '{') {

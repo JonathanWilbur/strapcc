@@ -956,44 +956,6 @@ _default:
     file->buf_ptr = p;
 }
 
-#if 0
-/* return the number of additional 'ints' necessary to store the
-   token */
-static inline int tok_size(const int *p)
-{
-    switch(*p) {
-        /* 4 bytes */
-    case TOK_CINT:
-    case TOK_CUINT:
-    case TOK_CCHAR:
-    case TOK_LCHAR:
-    case TOK_CFLOAT:
-    case TOK_LINENUM:
-        return 1 + 1;
-    case TOK_STR:
-    case TOK_LSTR:
-    case TOK_PPNUM:
-    case TOK_PPSTR:
-        return 1 + 1 + (p[1] + 3) / 4;
-    case TOK_CLONG:
-    case TOK_CULONG:
-	return 1 + LONG_SIZE / 4;
-    case TOK_CDOUBLE:
-    case TOK_CLLONG:
-    case TOK_CULLONG:
-        return 1 + 2;
-    case TOK_CLDOUBLE:
-#ifdef TCC_USING_DOUBLE_FOR_LDOUBLE
-        return 1 + 8 / 4;
-#else
-        return 1 + LDOUBLE_SIZE / 4;
-#endif
-    default:
-        return 1 + 0;
-    }
-}
-#endif
-
 /* token string handling */
 ST_INLN void tok_str_new(TokenString *s)
 {
@@ -1235,9 +1197,6 @@ static inline void tok_get(int *t, const int **pp, CValue *cv)
     *pp = p;
 }
 
-#if 0
-# define TOK_GET(t,p,c) tok_get(t,p,c)
-#else
 # define TOK_GET(t,p,c) do { \
     int _t = **(p); \
     if (TOK_HAS_VALUE(_t)) \
@@ -1245,7 +1204,6 @@ static inline void tok_get(int *t, const int **pp, CValue *cv)
     else \
         *(t) = _t, ++*(p); \
     } while (0)
-#endif
 
 static int macro_is_equal(const int *a, const int *b)
 {
