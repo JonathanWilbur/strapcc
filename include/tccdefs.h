@@ -200,11 +200,6 @@
     #define __builtin_va_arg(ap, t)   \
        (*(t *)(__va_arg(ap, __builtin_va_arg_types(t), sizeof(t), __alignof__(t))))
     #define __builtin_va_copy(dest, src) (*(dest) = *(src))
-
-#else /* _WIN64 */
-    typedef char *__builtin_va_list;
-    #define __builtin_va_arg(ap, t) ((sizeof(t) > 8 || (sizeof(t) & (sizeof(t) - 1))) \
-        ? **(t **)((ap += 8) - 8) : *(t  *)((ap += 8) - 8))
 #endif
 
 #elif defined __arm__

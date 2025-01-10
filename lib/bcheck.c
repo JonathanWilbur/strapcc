@@ -22,21 +22,9 @@
 #include <stdarg.h>
 #include <string.h>
 #include <setjmp.h>
-
-#if !defined(__FreeBSD__) \
- && !defined(__FreeBSD_kernel__) \
- && !defined(__DragonFly__) \
- && !defined(__OpenBSD__) \
- && !defined(__APPLE__) \
- && !defined(__NetBSD__)
 #include <malloc.h>
-#endif
-
-#if !defined(_WIN32)
 #include <unistd.h>
 #include <sys/syscall.h>
-#endif
-
 #include "config.h"
 
 #define BOUND_DEBUG             (1)
@@ -54,11 +42,7 @@
 #endif
 #define FASTCALL __attribute__((regparm(3)))
 
-#ifdef _WIN32
-# define DLL_EXPORT __declspec(dllexport)
-#else
-# define DLL_EXPORT
-#endif
+#define DLL_EXPORT
 
 #if defined(__FreeBSD__) \
  || defined(__FreeBSD_kernel__) \

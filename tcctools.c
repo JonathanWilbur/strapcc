@@ -378,9 +378,6 @@ ST_FUNC int tcc_tool_cross(TCCState *s1, char **argv, int target)
     snprintf(program, sizeof program,
         "%.*s%s"
         "-tcc"
-#ifdef _WIN32
-        ".exe"
-#endif
         , prefix, a0, target == 64 ? "x86_64" : "i386");
 
     if (strcmp(a0, program))
@@ -390,15 +387,6 @@ ST_FUNC int tcc_tool_cross(TCCState *s1, char **argv, int target)
 }
 
 #endif /* TCC_TARGET_I386 && TCC_TARGET_X86_64 */
-/* -------------------------------------------------------------- */
-/* enable commandline wildcard expansion (tcc -o x.exe *.c) */
-
-#ifdef _WIN32
-const int _CRT_glob = 1;
-#ifndef _CRT_glob
-const int _dowildcard = 1;
-#endif
-#endif
 
 /* -------------------------------------------------------------- */
 /* generate xxx.d file */

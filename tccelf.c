@@ -1056,25 +1056,6 @@ ST_FUNC void relocate_syms(TCCState *s1, Section *symtab, int do_resolve)
             name = (char *) s1->symtab->link->data + sym->st_name;
             /* Use ld.so to resolve symbol for us (for tcc -run) */
             if (do_resolve) {
-#if defined TCC_IS_NATIVE && !defined TCC_TARGET_PE
-                /* dlsym() needs the undecorated name.  */
-                void *addr = dlsym(RTLD_DEFAULT, &name[s1->leading_underscore]);
-#if TARGETOS_OpenBSD || TARGETOS_FreeBSD || TARGETOS_NetBSD || TARGETOS_ANDROID
-		if (addr == NULL) {
-		    int i;
-		    for (i = 0; i < s1->nb_loaded_dlls; i++)
-                        if ((addr = dlsym(s1->loaded_dlls[i]->handle, name)))
-			    break;
-		}
-#endif
-                if (addr) {
-                    sym->st_value = (addr_t) addr;
-#ifdef DEBUG_RELOC
-		    printf ("relocate_sym: %s -> 0x%lx\n", name, sym->st_value);
-#endif
-                    goto found;
-                }
-#endif
             /* if dynamic symbol exist, it will be used in relocate_section */
             } else if (s1->dynsym && find_elf_sym(s1->dynsym, name))
                 goto found;
@@ -1674,9 +1655,6 @@ static void tcc_tcov_add_file(TCCState *s1, const char *filename)
     ptr = section_ptr_add(tcov_section, cstr.size + 1);
     strcpy((char *)ptr, cstr.data);
     unlink((char *)ptr);
-#ifdef _WIN32
-    normalize_slashes((char *)ptr);
-#endif
     cstr_free (&cstr);
 
     cstr_new(&cstr);

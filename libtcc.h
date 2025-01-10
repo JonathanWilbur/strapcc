@@ -84,10 +84,6 @@ LIBTCCAPI int tcc_add_symbol(TCCState *s, const char *name, const void *val);
    tcc_relocate() before. */
 LIBTCCAPI int tcc_output_file(TCCState *s, const char *filename);
 
-/* link and run main() function and return its value. DO NOT call
-   tcc_relocate() before. */
-LIBTCCAPI int tcc_run(TCCState *s, int argc, char **argv);
-
 /* do all relocations (needed before using tcc_get_symbol()) */
 LIBTCCAPI int tcc_relocate(TCCState *s1);
 

@@ -19,18 +19,6 @@ _(__bound_alloca):
     and     $-4,%eax
     jz      p6
 
-#ifdef _WIN32
-p4:
-    cmp     $4096,%eax
-    jbe     p5
-    test    %eax,-4096(%esp)
-    sub     $4096,%esp
-    sub     $4096,%eax
-    jmp p4
-
-p5:
-#endif
-
     sub     %eax,%esp
     mov     %esp,%eax
 
@@ -53,21 +41,6 @@ p6:
 
 .globl _(__bound_alloca)
 _(__bound_alloca):
-#ifdef _WIN32
-    inc %rcx            # add one extra to separate regions
-    jmp _(alloca)
-.globl _(__bound_alloca_nr)
-_(__bound_alloca_nr):
-    dec     %rcx
-    push    %rax
-    mov     %rcx,%rdx
-    mov     %rax,%rcx
-    sub     $32,%rsp
-    call    _(__bound_new_region)
-    add     $32,%rsp
-    pop     %rax
-    ret
-#else
     pop     %rdx
     mov     %rdi,%rax
     mov     %rax,%rsi	# size, a second parm to the __bound_new_region
@@ -90,7 +63,6 @@ _(__bound_alloca_nr):
 p3:
     push    %rdx
     ret
-#endif
 
 /* ---------------------------------------------- */
 #endif

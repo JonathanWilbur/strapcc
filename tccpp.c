@@ -542,11 +542,7 @@ ST_FUNC const char *get_tok_str(int v, CValue *cv)
     case TOK_CLLONG:
     case TOK_CULLONG:
         /* XXX: not quite exact, but only useful for testing  */
-#ifdef _WIN32
-        sprintf(p, "%u", (unsigned)cv->i);
-#else
         sprintf(p, "%llu", (unsigned long long)cv->i);
-#endif
         break;
     case TOK_LCHAR:
         cstr_ccat(&cstr_buf, 'L');
@@ -1633,11 +1629,7 @@ static CachedInclude *search_cached_include(TCCState *s1, const char *filename, 
     s = basename = tcc_basename(filename);
     h = TOK_HASH_INIT;
     while ((c = (unsigned char)*s) != 0) {
-#ifdef _WIN32
-        h = TOK_HASH_FUNC(h, toup(c));
-#else
         h = TOK_HASH_FUNC(h, c);
-#endif
         s++;
     }
     h &= (CACHED_INCLUDES_HASH_SIZE - 1);

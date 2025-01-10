@@ -116,22 +116,6 @@ extern long double strtold (const char *__nptr, char **__endptr);
 # endif
 #endif
 
-/* only native compiler supports -run */
-#if defined _WIN32 == defined TCC_TARGET_PE \
-    && defined __APPLE__ == defined TCC_TARGET_MACHO
-# if defined __i386__ && defined TCC_TARGET_I386
-#  define TCC_IS_NATIVE
-# elif defined __x86_64__ && defined TCC_TARGET_X86_64
-#  define TCC_IS_NATIVE
-# elif defined __arm__ && defined TCC_TARGET_ARM
-#  define TCC_IS_NATIVE
-# elif defined __aarch64__ && defined TCC_TARGET_ARM64
-#  define TCC_IS_NATIVE
-# elif defined __riscv && defined __LP64__ && defined TCC_TARGET_RISCV64
-#  define TCC_IS_NATIVE
-# endif
-#endif
-
 #if defined CONFIG_TCC_BACKTRACE && CONFIG_TCC_BACKTRACE==0
 # undef CONFIG_TCC_BACKTRACE
 #else
@@ -900,17 +884,6 @@ struct TCCState {
     Section *verneed_section;
 #endif
 
-#ifdef TCC_IS_NATIVE
-    const char *run_main; /* entry for tcc_run() */
-    void *run_ptr; /* runtime_memory */
-    unsigned run_size; /* size of runtime_memory  */
-    struct TCCState *next;
-    struct rt_context *rc; /* pointer to backtrace info block */
-    void *run_lj, *run_jb; /* sj/lj for tcc_setjmp()/tcc_run() */
-    TCCBtFunc *bt_func;
-    void *bt_data;
-#endif
-
 #ifdef CONFIG_TCC_BACKTRACE
     int rt_num_callers;
 #endif
@@ -1226,9 +1199,6 @@ ST_FUNC void tcc_add_pragma_libs(TCCState *s1);
 PUB_FUNC int tcc_add_library_err(TCCState *s, const char *f);
 PUB_FUNC void tcc_print_stats(TCCState *s, unsigned total_time);
 PUB_FUNC int tcc_parse_args(TCCState *s, int *argc, char ***argv, int optind);
-#ifdef _WIN32
-ST_FUNC char *normalize_slashes(char *path);
-#endif
 ST_FUNC DLLReference *tcc_add_dllref(TCCState *s1, const char *dllname, int level);
 ST_FUNC char *tcc_load_text(int fd);
 /* for #pragma once */
@@ -1520,13 +1490,10 @@ enum gotplt_entry {
 };
 #define NEED_RELOC_TYPE
 
-#if !defined TCC_TARGET_MACHO || defined TCC_IS_NATIVE
 ST_FUNC unsigned create_plt_entry(TCCState *s1, unsigned got_offset, struct sym_attr *attr);
 ST_FUNC void relocate_plt(TCCState *s1);
 ST_FUNC void build_got_entries(TCCState *s1, int got_sym); /* in tccelf.c */
 #define NEED_BUILD_GOT
-
-#endif
 #endif
 
 ST_FUNC void relocate(TCCState *s1, ElfW_Rel *rel, int type, unsigned char *ptr, addr_t addr, addr_t val);
@@ -1737,32 +1704,6 @@ PUB_FUNC int tcc_get_dllexports(const char *filename, char **pp);
 # define ST_PE_STDCALL 0x40
 #endif
 #define ST_ASM_SET 0x04
-
-/* ------------ tccmacho.c ----------------- */
-#ifdef TCC_TARGET_MACHO
-ST_FUNC int macho_output_file(TCCState * s1, const char *filename);
-ST_FUNC int macho_load_dll(TCCState *s1, int fd, const char *filename, int lev);
-ST_FUNC int macho_load_tbd(TCCState *s1, int fd, const char *filename, int lev);
-#ifdef TCC_IS_NATIVE
-ST_FUNC void tcc_add_macos_sdkpath(TCCState* s);
-ST_FUNC const char* macho_tbd_soname(const char* filename);
-#endif
-#endif
-/* ------------ tccrun.c ----------------- */
-#ifdef TCC_IS_NATIVE
-#ifdef CONFIG_TCC_STATIC
-#define RTLD_LAZY       0x001
-#define RTLD_NOW        0x002
-#define RTLD_GLOBAL     0x100
-#define RTLD_DEFAULT    NULL
-/* dummy function for profiling */
-ST_FUNC void *dlopen(const char *filename, int flag);
-ST_FUNC void dlclose(void *p);
-ST_FUNC const char *dlerror(void);
-ST_FUNC void *dlsym(void *handle, const char *symbol);
-#endif
-ST_FUNC void tcc_run_free(TCCState *s1);
-#endif
 
 /* ------------ tcctools.c ----------------- */
 #if 0 /* included in tcc.c */

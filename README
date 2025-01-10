@@ -4,6 +4,10 @@ Tiny C Compiler - C Scripting Everywhere - The Smallest ANSI C compiler
 TODO:
 
 - [ ] Get rid of -run support
+  - Remove everything that runs if `TCC_IS_NATIVE`
+- [ ] Get rid of `_WIN32`, `__APPLE__`, etc.
+- [ ] Comment, label, and rename everything so it is extremely understandable.
+- [ ] `tcc_print_stats`
 
 Features:
 --------

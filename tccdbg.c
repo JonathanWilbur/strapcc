@@ -1032,9 +1032,6 @@ ST_FUNC void tcc_debug_start(TCCState *s1)
         n_debug_anon_hash = 0;
 
         getcwd(buf, sizeof(buf));
-#ifdef _WIN32
-        normalize_slashes(buf);
-#endif
 
         if (s1->dwarf) {
             int start_abbrev;
@@ -2356,9 +2353,6 @@ ST_FUNC void tcc_tcov_block_begin(TCCState *s1)
 	}
 	ptr = section_ptr_add(tcov_section, cstr.size + 1);
 	strcpy((char *)ptr, cstr.data);
-#ifdef _WIN32
-        normalize_slashes((char *)ptr);
-#endif
 	cstr_free (&cstr);
     }
     if (tcov_data.last_func_name == 0 ||

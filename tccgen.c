@@ -3217,12 +3217,6 @@ error:
         }
 
         c = (vtop->r & (VT_VALMASK | VT_LVAL | VT_SYM)) == VT_CONST;
-#if !defined TCC_IS_NATIVE && !defined TCC_IS_NATIVE_387
-        /* don't try to convert to ldouble when cross-compiling
-           (except when it's '0' which is needed for arm:gen_negf()) */
-        if (dbt_bt == VT_LDOUBLE && !nocode_wanted && (sf || vtop->c.i != 0))
-            c = 0;
-#endif
         if (c) {
             /* constant case: we can do it now */
             /* XXX: in ISOC, cannot do it if error in convert */

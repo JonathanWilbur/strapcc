@@ -829,10 +829,6 @@ LIBTCCAPI void tcc_delete(TCCState *s1)
     cstr_free(&s1->cmdline_incl);
     cstr_free(&s1->linker_arg);
     tcc_free(s1->dState);
-#ifdef TCC_IS_NATIVE
-    /* free runtime memory */
-    tcc_run_free(s1);
-#endif
     /* free loaded dlls array */
     dynarray_reset(&s1->loaded_dlls, &s1->nb_loaded_dlls);
     tcc_free(s1);
@@ -871,21 +867,10 @@ LIBTCCAPI int tcc_set_output_type(TCCState *s, int output_type)
 
     tcc_add_library_path(s, CONFIG_TCC_LIBPATHS);
 
-#ifdef TCC_TARGET_PE
-# ifdef TCC_IS_NATIVE
-    /* allow linking with system dll's directly */
-    tcc_add_systemdir(s);
-# endif
-#elif defined TCC_TARGET_MACHO
-# ifdef TCC_IS_NATIVE
-    tcc_add_macos_sdkpath(s);
-# endif
-#else
     /* paths for crt objects */
     tcc_split_path(s, &s->crt_paths, &s->nb_crt_paths, CONFIG_TCC_CRTPREFIX);
     if (output_type != TCC_OUTPUT_MEMORY && !s->nostdlib)
         tccelf_add_crtbegin(s);
-#endif
     return 0;
 }
 
@@ -976,17 +961,6 @@ ST_FUNC int tcc_add_file_internal(TCCState *s1, const char *filename, int flags)
         case AFF_BINTYPE_DYN:
         case_dyn_or_tbd:
             if (s1->output_type == TCC_OUTPUT_MEMORY) {
-#ifdef TCC_IS_NATIVE
-                void* dl;
-                const char* soname = filename;
-                if (obj_type != AFF_BINTYPE_DYN)
-                    soname = macho_tbd_soname(filename);
-                dl = dlopen(soname, RTLD_GLOBAL | RTLD_LAZY);
-                if (dl)
-                    tcc_add_dllref(s1, soname, 0)->handle = dl, ret = 0;
-	        if (filename != soname)
-		    tcc_free((void *)soname);
-#endif
             } else if (obj_type == AFF_BINTYPE_DYN) {
                 ret = macho_load_dll(s1, fd, filename, (flags & AFF_REFERENCED_DLL) != 0);
             } else {
@@ -1008,11 +982,6 @@ ST_FUNC int tcc_add_file_internal(TCCState *s1, const char *filename, int flags)
 #else /* unix */
         case AFF_BINTYPE_DYN:
             if (s1->output_type == TCC_OUTPUT_MEMORY) {
-#ifdef TCC_IS_NATIVE
-                void* dl = dlopen(filename, RTLD_GLOBAL | RTLD_LAZY);
-                if (dl)
-                    tcc_add_dllref(s1, filename, 0)->handle = dl, ret = 0;
-#endif
             } else
                 ret = tcc_load_dll(s1, fd, filename, (flags & AFF_REFERENCED_DLL) != 0);
             break;
@@ -1944,13 +1913,7 @@ dorun:
             s->nostdlib = 1;
             break;
         case TCC_OPTION_run:
-#ifndef TCC_IS_NATIVE
             return tcc_error_noabort("-run is not available in a cross compiler");
-#else
-            run = optarg;
-            x = TCC_OUTPUT_MEMORY;
-            goto set_output_type;
-#endif
         case TCC_OPTION_v:
             do ++s->verbose; while (*optarg++ == 'v');
             ++noaction;
@@ -2138,15 +2101,6 @@ PUB_FUNC void tcc_print_stats(TCCState *s1, unsigned total_time)
            );
 #ifdef MEM_DEBUG
     fprintf(stderr, "# memory usage");
-#ifdef TCC_IS_NATIVE
-    if (s1->run_size) {
-        Section *s = s1->symtab;
-        unsigned ms = s->data_offset + s->link->data_offset + s->hash->data_offset;
-        unsigned rs = s1->run_size;
-        fprintf(stderr, ": %d to run, %d symbols, %d other,",
-            rs, ms, mem_cur_size - rs - ms);
-    }
-#endif
     fprintf(stderr, " %d max (bytes)\n", mem_max_size);
 #endif
 }
