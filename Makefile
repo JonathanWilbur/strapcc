@@ -171,9 +171,6 @@ ifneq ($(X),)
 $(if $(DEF-$T),,$(error error: unknown target: '$T'))
 DEF-$(NATIVE_TARGET) =
 DEF-$T += -DCONFIG_TCC_CROSSPREFIX="\"$X\""
-ifneq ($(CONFIG_WIN32),yes)
-DEF-win += -DCONFIG_TCCDIR="\"$(tccdir)/win32\""
-endif
 else
 # using values from config.h
 DEF-$(NATIVE_TARGET) =

@@ -649,7 +649,6 @@ for v in $cpu $confvars ; do
     CONFIG_arm_eabi=yes)    print_num TCC_ARM_EABI 1 ;;
     CONFIG_arm_vfp=yes)     print_num TCC_ARM_VFP 1 ;;
     # OS
-    CONFIG_WIN32=yes)       print_num TCC_TARGET_PE 1 ;;
     CONFIG_OSX=yes)         print_num TCC_TARGET_MACHO 1 ;;
     CONFIG_Android=yes)     print_num TARGETOS_ANDROID 1 ;;
     CONFIG_BSD=yes)         print_num TARGETOS_$targetos 1

@@ -1789,9 +1789,6 @@ ST_FUNC void tccpp_putfile(const char *filename)
         *tcc_basename(buf) = 0;
     }
     pstrcat(buf, sizeof buf, filename);
-#ifdef _WIN32
-    normalize_slashes(buf);
-#endif
     if (0 == strcmp(file->filename, buf))
         return;
     //printf("new file '%s'\n", buf);

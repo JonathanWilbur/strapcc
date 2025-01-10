@@ -147,14 +147,6 @@ extern long double strtold (const char *__nptr, char **__endptr);
 # define ELF_OBJ_ONLY /* create elf .o but native executables */
 #endif
 
-/* No ten-byte long doubles on window and macos except in
-   cross-compilers made by a mingw-GCC */
-#if defined TCC_TARGET_PE \
-    || (defined TCC_TARGET_MACHO && defined TCC_TARGET_ARM64) \
-    || (defined _WIN32 && !defined __GNUC__)
-# define TCC_USING_DOUBLE_FOR_LDOUBLE 1
-#endif
-
 #ifdef CONFIG_TCC_PIE
 # define CONFIG_TCC_PIC 1
 #endif
@@ -164,7 +156,7 @@ extern long double strtold (const char *__nptr, char **__endptr);
 #ifndef CONFIG_SYSROOT
 # define CONFIG_SYSROOT ""
 #endif
-#if !defined CONFIG_TCCDIR && !defined _WIN32
+#if !defined CONFIG_TCCDIR
 # define CONFIG_TCCDIR "/usr/local/lib/tcc"
 #endif
 #ifndef CONFIG_LDDIR
@@ -191,27 +183,19 @@ extern long double strtold (const char *__nptr, char **__endptr);
 
 /* system include paths */
 #ifndef CONFIG_TCC_SYSINCLUDEPATHS
-# if defined TCC_TARGET_PE || defined _WIN32
-#  define CONFIG_TCC_SYSINCLUDEPATHS "{B}/include"PATHSEP"{B}/include/winapi"
-# else
-#  define CONFIG_TCC_SYSINCLUDEPATHS \
+# define CONFIG_TCC_SYSINCLUDEPATHS \
         "{B}/include" \
     ":" ALSO_TRIPLET(CONFIG_SYSROOT "/usr/local/include") \
     ":" ALSO_TRIPLET(CONFIG_SYSROOT CONFIG_USR_INCLUDE)
-# endif
 #endif
 
 /* library search paths */
 #ifndef CONFIG_TCC_LIBPATHS
-# if defined TCC_TARGET_PE || defined _WIN32
-#  define CONFIG_TCC_LIBPATHS "{B}/lib"
-# else
-#  define CONFIG_TCC_LIBPATHS \
+# define CONFIG_TCC_LIBPATHS \
         "{B}" \
     ":" ALSO_TRIPLET(CONFIG_SYSROOT "/usr/" CONFIG_LDDIR) \
     ":" ALSO_TRIPLET(CONFIG_SYSROOT "/" CONFIG_LDDIR) \
     ":" ALSO_TRIPLET(CONFIG_SYSROOT "/usr/local/" CONFIG_LDDIR)
-# endif
 #endif
 
 /* name of ELF interpreter */
@@ -295,23 +279,6 @@ extern long double strtold (const char *__nptr, char **__endptr);
 #elif defined TCC_TARGET_X86_64
 # include "x86_64-gen.c"
 # include "x86_64-link.c"
-#elif defined TCC_TARGET_ARM
-# include "arm-gen.c"
-# include "arm-link.c"
-# include "arm-asm.c"
-#elif defined TCC_TARGET_ARM64
-# include "arm64-gen.c"
-# include "arm64-link.c"
-# include "arm-asm.c"
-#elif defined TCC_TARGET_C67
-# define TCC_TARGET_COFF
-# include "coff.h"
-# include "c67-gen.c"
-# include "c67-link.c"
-#elif defined(TCC_TARGET_RISCV64)
-# include "riscv64-gen.c"
-# include "riscv64-link.c"
-# include "riscv64-asm.c"
 #else
 #error unknown target
 #endif
