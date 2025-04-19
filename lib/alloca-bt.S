@@ -7,38 +7,6 @@
 # define _(s) s
 #endif
 
-/* ---------------------------------------------- */
-#if defined __i386__
-
-.globl _(__bound_alloca)
-_(__bound_alloca):
-    pop     %edx
-    pop     %eax
-    mov     %eax, %ecx
-    add     $3+1,%eax
-    and     $-4,%eax
-    jz      p6
-
-    sub     %eax,%esp
-    mov     %esp,%eax
-
-    push    %edx
-    push    %eax
-    push    %ecx
-    push    %eax
-    call    _(__bound_new_region)
-    add     $8, %esp
-    pop     %eax
-    pop     %edx
-
-p6:
-    push    %edx
-    push    %edx
-    ret
-
-/* ---------------------------------------------- */
-#elif defined __x86_64__
-
 .globl _(__bound_alloca)
 _(__bound_alloca):
     pop     %rdx
@@ -63,6 +31,3 @@ _(__bound_alloca):
 p3:
     push    %rdx
     ret
-
-/* ---------------------------------------------- */
-#endif

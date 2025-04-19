@@ -373,15 +373,6 @@ struct _tccdbg {
         int base_type_used[N_DEFAULT_DEBUG];
     } dwarf_info;
 
-    /* test coverage */
-    struct {
-        unsigned long offset;
-        unsigned long last_file_name;
-        unsigned long last_func_name;
-        int ind;
-        int line;
-    } tcov_data;
-
 };
 
 #define last_line_num       s1->dState->last_line_num
@@ -397,7 +388,6 @@ struct _tccdbg {
 #define dwarf_sym           s1->dState->dwarf_sym
 #define dwarf_line          s1->dState->dwarf_line
 #define dwarf_info          s1->dState->dwarf_info
-#define tcov_data           s1->dState->tcov_data
 
 #define	FDE_ENCODING        (DW_EH_PE_udata4 | DW_EH_PE_signed | DW_EH_PE_pcrel)
 
@@ -2155,142 +2145,6 @@ ST_FUNC void tcc_debug_typedef(TCCState *s1, Sym *sym)
 }
 
 /* ------------------------------------------------------------------------- */
-/* for section layout see lib/tcov.c */
-
-ST_FUNC void tcc_tcov_block_end(TCCState *s1, int line);
-
-ST_FUNC void tcc_tcov_block_begin(TCCState *s1)
-{
-    SValue sv;
-    void *ptr;
-    unsigned long last_offset = tcov_data.offset;
-
-    tcc_tcov_block_end (tcc_state, 0);
-    if (s1->test_coverage == 0 || nocode_wanted)
-	return;
-
-    if (tcov_data.last_file_name == 0 ||
-	strcmp ((const char *)(tcov_section->data + tcov_data.last_file_name),
-		file->true_filename) != 0) {
-	char wd[1024];
-	CString cstr;
-
-	if (tcov_data.last_func_name)
-	    section_ptr_add(tcov_section, 1);
-	if (tcov_data.last_file_name)
-	    section_ptr_add(tcov_section, 1);
-	tcov_data.last_func_name = 0;
-	cstr_new (&cstr);
-	if (file->true_filename[0] == '/') {
-	    tcov_data.last_file_name = tcov_section->data_offset;
-	    cstr_printf (&cstr, "%s", file->true_filename);
-	}
-	else {
-	    getcwd (wd, sizeof(wd));
-	    tcov_data.last_file_name = tcov_section->data_offset + strlen(wd) + 1;
-	    cstr_printf (&cstr, "%s/%s", wd, file->true_filename);
-	}
-	ptr = section_ptr_add(tcov_section, cstr.size + 1);
-	strcpy((char *)ptr, cstr.data);
-	cstr_free (&cstr);
-    }
-    if (tcov_data.last_func_name == 0 ||
-	strcmp ((const char *)(tcov_section->data + tcov_data.last_func_name),
-		funcname) != 0) {
-	size_t len;
-
-	if (tcov_data.last_func_name)
-	    section_ptr_add(tcov_section, 1);
-	tcov_data.last_func_name = tcov_section->data_offset;
-	len = strlen (funcname);
-	ptr = section_ptr_add(tcov_section, len + 1);
-	strcpy((char *)ptr, funcname);
-	section_ptr_add(tcov_section, -tcov_section->data_offset & 7);
-	ptr = section_ptr_add(tcov_section, 8);
-	write64le (ptr, file->line_num);
-    }
-    if (ind == tcov_data.ind && tcov_data.line == file->line_num)
-        tcov_data.offset = last_offset;
-    else {
-        Sym label = {0};
-        label.type.t = VT_LLONG | VT_STATIC;
-
-        ptr = section_ptr_add(tcov_section, 16);
-        tcov_data.line = file->line_num;
-        write64le (ptr, (tcov_data.line << 8) | 0xff);
-        put_extern_sym(&label, tcov_section,
-		       ((unsigned char *)ptr - tcov_section->data) + 8, 0);
-        sv.type = label.type;
-        sv.r = VT_SYM | VT_LVAL | VT_CONST;
-        sv.r2 = VT_CONST;
-        sv.c.i = 0;
-        sv.sym = &label;
-        gen_increment_tcov (&sv);
-        tcov_data.offset = (unsigned char *)ptr - tcov_section->data;
-        tcov_data.ind = ind;
-    }
-}
-
-ST_FUNC void tcc_tcov_block_end(TCCState *s1, int line)
-{
-    if (s1->test_coverage == 0)
-	return;
-    if (line == -1)
-        line = tcov_data.line;
-    if (tcov_data.offset) {
-	void *ptr = tcov_section->data + tcov_data.offset;
-	unsigned long long nline = line ? line : file->line_num;
-
-	write64le (ptr, (read64le (ptr) & 0xfffffffffull) | (nline << 36));
-	tcov_data.offset = 0;
-    }
-}
-
-ST_FUNC void tcc_tcov_check_line(TCCState *s1, int start)
-{
-    if (s1->test_coverage == 0)
-	return;
-    if (tcov_data.line != file->line_num) {
-        if ((tcov_data.line + 1) != file->line_num) {
-	    tcc_tcov_block_end (s1, -1);
-	    if (start)
-                tcc_tcov_block_begin (s1);
-	}
-	else
-	    tcov_data.line = file->line_num;
-    }
-}
-
-ST_FUNC void tcc_tcov_start(TCCState *s1)
-{
-    if (s1->test_coverage == 0)
-	return;
-    if (!s1->dState)
-        s1->dState = tcc_mallocz(sizeof *s1->dState);
-    memset (&tcov_data, 0, sizeof (tcov_data));
-    if (tcov_section == NULL) {
-        tcov_section = new_section(tcc_state, ".tcov", SHT_PROGBITS,
-				   SHF_ALLOC | SHF_WRITE);
-	section_ptr_add(tcov_section, 4); // pointer to executable name
-    }
-}
-
-ST_FUNC void tcc_tcov_end(TCCState *s1)
-{
-    if (s1->test_coverage == 0)
-	return;
-    if (tcov_data.last_func_name)
-        section_ptr_add(tcov_section, 1);
-    if (tcov_data.last_file_name)
-        section_ptr_add(tcov_section, 1);
-}
-
-ST_FUNC void tcc_tcov_reset_ind(TCCState *s1)
-{
-    tcov_data.ind = 0;
-}
-
-/* ------------------------------------------------------------------------- */
 #undef last_line_num
 #undef new_file
 #undef section_sym
@@ -2304,4 +2158,3 @@ ST_FUNC void tcc_tcov_reset_ind(TCCState *s1)
 #undef dwarf_sym
 #undef dwarf_line
 #undef dwarf_info
-#undef tcov_data

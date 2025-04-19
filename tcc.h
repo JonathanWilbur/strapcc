@@ -231,30 +231,17 @@ extern long double strtold (const char *__nptr, char **__endptr);
 
 /* -------------------------------------------- */
 
-#if PTR_SIZE == 8
 # define ELFCLASSW ELFCLASS64
 # define ElfW(type) Elf##64##_##type
 # define ELFW(type) ELF##64##_##type
 # define ElfW_Rel ElfW(Rela)
 # define SHT_RELX SHT_RELA
 # define REL_SECTION_FMT ".rela%s"
-#else
-# define ELFCLASSW ELFCLASS32
-# define ElfW(type) Elf##32##_##type
-# define ELFW(type) ELF##32##_##type
-# define ElfW_Rel ElfW(Rel)
-# define SHT_RELX SHT_REL
-# define REL_SECTION_FMT ".rel%s"
-#endif
 /* target address type */
 #define addr_t ElfW(Addr)
 #define ElfSym ElfW(Sym)
 
-#if PTR_SIZE == 8
 # define LONG_SIZE 8
-#else
-# define LONG_SIZE 4
-#endif
 
 /* -------------------------------------------- */
 
@@ -732,8 +719,6 @@ struct TCCState {
     Section *dwarf_str_section;
     Section *dwarf_line_str_section;
     int dwlo, dwhi; /* dwarf section range */
-    /* test coverage */
-    Section *tcov_section;
     /* debug state */
     struct _tccdbg *dState;
 
@@ -1469,7 +1454,6 @@ ST_FUNC void gen_le32(int c);
 ST_FUNC void gen_addr32(int r, Sym *sym, int c);
 ST_FUNC void gen_addrpc32(int r, Sym *sym, int c);
 ST_FUNC void gen_cvt_csti(int t);
-ST_FUNC void gen_increment_tcov (SValue *sv);
 
 /* ------------ x86_64-gen.c ------------ */
 ST_FUNC void gen_addr64(int r, Sym *sym, int64_t c);
@@ -1525,16 +1509,8 @@ ST_FUNC void tcc_eh_frame_hdr(TCCState *s1, int final);
 #define TCC_EH_FRAME 1
 #endif
 
-ST_FUNC void tcc_tcov_start(TCCState *s1);
-ST_FUNC void tcc_tcov_end(TCCState *s1);
-ST_FUNC void tcc_tcov_check_line(TCCState *s1, int start);
-ST_FUNC void tcc_tcov_block_end(TCCState *s1, int line);
-ST_FUNC void tcc_tcov_block_begin(TCCState *s1);
-ST_FUNC void tcc_tcov_reset_ind(TCCState *s1);
-
 #define stab_section            s1->stab_section
 #define stabstr_section         stab_section->link
-#define tcov_section            s1->tcov_section
 #define eh_frame_section        s1->eh_frame_section
 #define eh_frame_hdr_section    s1->eh_frame_hdr_section
 #define dwarf_info_section      s1->dwarf_info_section

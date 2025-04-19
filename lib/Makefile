@@ -48,7 +48,6 @@ Nat = $(if $X,no,)
 Cbt = $(Nat)$(subst yes,,$(CONFIG_backtrace))
 Cbc = $(Cbt)$(subst yes,,$(CONFIG_bcheck))
 
-$(Nat)COMMON_O += tcov.o
 $(Cbt)COMMON_O += bt-exe.o bt-log.o
 $(Cbt)WIN_O += bt-dll.o
 $(Cbc)COMMON_O += bcheck.o

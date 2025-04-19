@@ -176,8 +176,6 @@ static int gind()
 {
   int t = ind;
   CODE_ON();
-  if (debug_modes)
-    tcc_tcov_block_begin(tcc_state);
   return t;
 }
 
@@ -355,7 +353,6 @@ ST_FUNC int tccgen_compile(TCCState *s1)
     debug_modes = (s1->do_debug ? 1 : 0) | s1->test_coverage << 1;
 
     tcc_debug_start(s1);
-    tcc_tcov_start (s1);
 #ifdef INC_DEBUG
     printf("%s: **** new file\n", file->filename);
 #endif
@@ -369,7 +366,6 @@ ST_FUNC int tccgen_compile(TCCState *s1)
     tcc_eh_frame_end(s1);
 #endif
     tcc_debug_end(s1);
-    tcc_tcov_end(s1);
     return 0;
 }
 
@@ -5266,7 +5262,7 @@ ST_FUNC void unary(void)
 
     /* generate line number info */
     if (debug_modes)
-        tcc_debug_line(tcc_state), tcc_tcov_check_line (tcc_state, 1);
+        tcc_debug_line(tcc_state);
 
     type.ref = NULL;
     /* XXX: GCC 2.95.3 does not generate a table although it should be
@@ -5933,8 +5929,6 @@ special_math_val:
                 }
             }
             if (s->f.func_noreturn) {
-                if (debug_modes)
-	            tcc_tcov_block_end(tcc_state, -1);
                 CODE_OFF();
 	    }
         } else {
@@ -6703,9 +6697,6 @@ again:
         goto expr;
     next();
 
-    if (debug_modes)
-        tcc_tcov_check_line (tcc_state, 0), tcc_tcov_block_begin (tcc_state);
-
     if (t == TOK_IF) {
         new_scope_s(&o);
         skip('(');
@@ -6794,8 +6785,6 @@ again:
         /* jump unless last stmt in top-level block */
         if (tok != '}' || local_scope != 1)
             rsym = gjmp(rsym);
-        if (debug_modes)
-	    tcc_tcov_block_end (tcc_state, -1);
         CODE_OFF();
 
     } else if (t == TOK_BREAK) {
@@ -7008,8 +6997,6 @@ again:
                 AttributeDef ad_tmp;
                 parse_attribute(&ad_tmp);
               }
-            if (debug_modes)
-                tcc_tcov_reset_ind(tcc_state);
             vla_restore(cur_scope->vla.loc);
 
             if (tok != '}') {
@@ -7037,8 +7024,6 @@ again:
         }
     }
 
-    if (debug_modes)
-        tcc_tcov_check_line (tcc_state, 0), tcc_tcov_block_end (tcc_state, 0);
 }
 
 /* This skips over a stream of tokens containing balanced {} and ()
@@ -7506,7 +7491,7 @@ static void decl_initializer(init_params *p, CType *type, unsigned long c, int f
 
     /* generate line number info */
     if (debug_modes && !(flags & DIF_SIZE_ONLY) && !p->sec)
-        tcc_debug_line(tcc_state), tcc_tcov_check_line (tcc_state, 1);
+        tcc_debug_line(tcc_state);
 
     if (!(flags & DIF_HAVE_ELEM) && tok != '{' &&
 	/* In case of strings we have special handling for arrays, so

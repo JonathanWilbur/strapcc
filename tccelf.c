@@ -1562,41 +1562,6 @@ ST_FUNC void tcc_add_btstub(TCCState *s1)
 }
 #endif /* def CONFIG_TCC_BACKTRACE */
 
-static void tcc_tcov_add_file(TCCState *s1, const char *filename)
-{
-    CString cstr;
-    void *ptr;
-    char wd[1024];
-
-    if (tcov_section == NULL)
-        return;
-    section_ptr_add(tcov_section, 1);
-    write32le (tcov_section->data, tcov_section->data_offset);
-
-    cstr_new (&cstr);
-    if (filename[0] == '/')
-        cstr_printf (&cstr, "%s.tcov", filename);
-    else {
-        getcwd (wd, sizeof(wd));
-        cstr_printf (&cstr, "%s/%s.tcov", wd, filename);
-    }
-    ptr = section_ptr_add(tcov_section, cstr.size + 1);
-    strcpy((char *)ptr, cstr.data);
-    unlink((char *)ptr);
-    cstr_free (&cstr);
-
-    cstr_new(&cstr);
-    cstr_printf(&cstr,
-        "extern char *__tcov_data[];"
-        "extern void __store_test_coverage ();"
-        "__attribute__((destructor)) static void __tcov_exit() {"
-        "__store_test_coverage(__tcov_data);"
-        "}");
-    tcc_compile_string_no_debug(s1, cstr.data);
-    cstr_free(&cstr);
-    set_local_sym(s1, &"___tcov_data"[!s1->leading_underscore], tcov_section, 0);
-}
-
 /* add libc crt1/crti objects */
 ST_FUNC void tccelf_add_crtbegin(TCCState *s1)
 {
@@ -2770,8 +2735,6 @@ static int elf_output_obj(TCCState *s1, const char *filename)
 
 LIBTCCAPI int tcc_output_file(TCCState *s, const char *filename)
 {
-    if (s->test_coverage)
-        tcc_tcov_add_file(s, filename);
     if (s->output_type == TCC_OUTPUT_OBJ)
         return elf_output_obj(s, filename);
     return elf_output_file(s, filename);

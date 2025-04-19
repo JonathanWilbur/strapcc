@@ -439,10 +439,6 @@ tests2.%:
 # run test(s) from testspp subdir (see make help)
 testspp.%:
 	@$(MAKE) -C tests/pp $@
-# run tests with code coverage
-tcov-tes% : tcc_c$(EXESUF)
-	@rm -f $<.tcov
-	@$(MAKE) --no-print-directory TCC_LOCAL=$(CURDIR)/$< tes$*
 tcc_c$(EXESUF): $($T_FILES)
 	$S$(TCC) tcc.c -o $@ -ftest-coverage $(DEFINES) $(LIBS)
 # test the installed tcc instead
@@ -477,8 +473,6 @@ help:
 	@echo "   run all/single test(s) from tests2, optionally update .expect"
 	@echo "make testspp.all / make testspp.17"
 	@echo "   run all/single test(s) from tests/pp"
-	@echo "make tcov-test / tcov-tests2... / tcov-testspp..."
-	@echo "   run tests as above with code coverage. After test(s) see tcc_c$(EXESUF).tcov"
 	@echo "make test-install"
 	@echo "   run tests with the installed tcc"
 	@echo "Other supported make targets:"
