@@ -124,11 +124,7 @@ static const unsigned char dwarf_abbrev_init[] = {
           DW_AT_name, DW_FORM_line_strp,
           DW_AT_comp_dir, DW_FORM_line_strp,
           DW_AT_low_pc, DW_FORM_addr,
-#if PTR_SIZE == 4
-          DW_AT_high_pc, DW_FORM_data4,
-#else
           DW_AT_high_pc, DW_FORM_data8,
-#endif
           DW_AT_stmt_list, DW_FORM_sec_offset,
           0, 0,
     DWARF_ABBREV_BASE_TYPE, DW_TAG_base_type, 0,
@@ -244,11 +240,7 @@ static const unsigned char dwarf_abbrev_init[] = {
           DW_AT_decl_line, DW_FORM_udata,
           DW_AT_type, DW_FORM_ref4,
           DW_AT_low_pc, DW_FORM_addr,
-#if PTR_SIZE == 4
-          DW_AT_high_pc, DW_FORM_data4,
-#else
           DW_AT_high_pc, DW_FORM_data8,
-#endif
           DW_AT_sibling, DW_FORM_ref4,
 	  DW_AT_frame_base, DW_FORM_exprloc,
           0, 0,
@@ -258,29 +250,17 @@ static const unsigned char dwarf_abbrev_init[] = {
           DW_AT_decl_line, DW_FORM_udata,
           DW_AT_type, DW_FORM_ref4,
           DW_AT_low_pc, DW_FORM_addr,
-#if PTR_SIZE == 4
-          DW_AT_high_pc, DW_FORM_data4,
-#else
           DW_AT_high_pc, DW_FORM_data8,
-#endif
           DW_AT_sibling, DW_FORM_ref4,
 	  DW_AT_frame_base, DW_FORM_exprloc,
           0, 0,
     DWARF_ABBREV_LEXICAL_BLOCK, DW_TAG_lexical_block, 1,
           DW_AT_low_pc, DW_FORM_addr,
-#if PTR_SIZE == 4
-          DW_AT_high_pc, DW_FORM_data4,
-#else
           DW_AT_high_pc, DW_FORM_data8,
-#endif
           0, 0,
     DWARF_ABBREV_LEXICAL_EMPTY_BLOCK, DW_TAG_lexical_block, 0,
           DW_AT_low_pc, DW_FORM_addr,
-#if PTR_SIZE == 4
-          DW_AT_high_pc, DW_FORM_data4,
-#else
           DW_AT_high_pc, DW_FORM_data8,
-#endif
           0, 0,
     DWARF_ABBREV_SUBROUTINE_TYPE, DW_TAG_subroutine_type, 1,
           DW_AT_type, DW_FORM_ref4,
@@ -940,13 +920,8 @@ ST_FUNC void tcc_debug_start(TCCState *s1)
             dwarf_line_strp(dwarf_info_section, filename);
             dwarf_line_strp(dwarf_info_section, buf);
             dwarf_reloc(dwarf_info_section, section_sym, R_DATA_PTR);
-#if PTR_SIZE == 4
-            dwarf_data4(dwarf_info_section, ind); // low pc
-            dwarf_data4(dwarf_info_section, 0); // high pc
-#else
             dwarf_data8(dwarf_info_section, ind); // low pc
             dwarf_data8(dwarf_info_section, 0); // high pc
-#endif
             dwarf_reloc(dwarf_info_section, dwarf_sym.line, R_DATA_32DW);
             dwarf_data4(dwarf_info_section, dwarf_line_section->data_offset); // stmt_list
 
@@ -1072,25 +1047,14 @@ ST_FUNC void tcc_debug_end(TCCState *s1)
 	dwarf_data2(dwarf_aranges_section, 2); // version
 	dwarf_reloc(dwarf_aranges_section, dwarf_sym.info, R_DATA_32DW);
 	dwarf_data4(dwarf_aranges_section, 0); // dwarf_info
-#if PTR_SIZE == 4
-	dwarf_data1(dwarf_aranges_section, 4); // address size
-#else
 	dwarf_data1(dwarf_aranges_section, 8); // address size
-#endif
 	dwarf_data1(dwarf_aranges_section, 0); // segment selector size
 	dwarf_data4(dwarf_aranges_section, 0); // padding
 	dwarf_reloc(dwarf_aranges_section, section_sym, R_DATA_PTR);
-#if PTR_SIZE == 4
-	dwarf_data4(dwarf_aranges_section, 0); // Begin
-	dwarf_data4(dwarf_aranges_section, text_size); // End
-	dwarf_data4(dwarf_aranges_section, 0); // End list
-	dwarf_data4(dwarf_aranges_section, 0); // End list
-#else
 	dwarf_data8(dwarf_aranges_section, 0); // Begin
 	dwarf_data8(dwarf_aranges_section, text_size); // End
 	dwarf_data8(dwarf_aranges_section, 0); // End list
 	dwarf_data8(dwarf_aranges_section, 0); // End list
-#endif
 	ptr = dwarf_aranges_section->data + start_aranges;
 	write32le(ptr, dwarf_aranges_section->data_offset - start_aranges - 4);
 
@@ -1871,11 +1835,7 @@ static void tcc_debug_finish (TCCState *s1, struct _debug_info *cur)
                     dwarf_data1(dwarf_info_section, DW_OP_addr);
 		    if (s->type == N_STSYM)
 		        dwarf_reloc(dwarf_info_section, section_sym, R_DATA_PTR);
-#if PTR_SIZE == 4
-                    dwarf_data4(dwarf_info_section, s->value);
-#else
                     dwarf_data8(dwarf_info_section, s->value);
-#endif
 		}
 		else {
 		    /* param/local */
@@ -1890,13 +1850,8 @@ static void tcc_debug_finish (TCCState *s1, struct _debug_info *cur)
 			cur->child ? DWARF_ABBREV_LEXICAL_BLOCK
 			           : DWARF_ABBREV_LEXICAL_EMPTY_BLOCK);
             dwarf_reloc(dwarf_info_section, section_sym, R_DATA_PTR);
-#if PTR_SIZE == 4
-            dwarf_data4(dwarf_info_section, func_ind + cur->start);
-            dwarf_data4(dwarf_info_section, cur->end - cur->start);
-#else
             dwarf_data8(dwarf_info_section, func_ind + cur->start);
             dwarf_data8(dwarf_info_section, cur->end - cur->start);
-#endif
             tcc_debug_finish (s1, cur->child);
 	    if (cur->child)
                 dwarf_data1(dwarf_info_section, 0);
@@ -2035,13 +1990,8 @@ ST_FUNC void tcc_debug_funcend(TCCState *s1, int size)
 	tcc_debug_check_anon(s1, sym->type.ref, dwarf_info_section->data_offset);
         dwarf_data4(dwarf_info_section, n_debug_info - dwarf_info.start);
         dwarf_reloc(dwarf_info_section, section_sym, R_DATA_PTR);
-#if PTR_SIZE == 4
-        dwarf_data4(dwarf_info_section, func_ind); // low_pc
-        dwarf_data4(dwarf_info_section, size); // high_pc
-#else
         dwarf_data8(dwarf_info_section, func_ind); // low_pc
         dwarf_data8(dwarf_info_section, size); // high_pc
-#endif
         func_sib = dwarf_info_section->data_offset;
         dwarf_data4(dwarf_info_section, 0); // sibling
         dwarf_data1(dwarf_info_section, 1);
@@ -2085,11 +2035,7 @@ ST_FUNC void tcc_debug_extern_sym(TCCState *s1, Sym *sym, int sh_num, int sym_bi
 	dwarf_data1(dwarf_info_section, DW_OP_addr);
 	greloca(dwarf_info_section, sym, dwarf_info_section->data_offset,
 		R_DATA_PTR, 0);
-#if PTR_SIZE == 4
-	dwarf_data4(dwarf_info_section, 0);
-#else
 	dwarf_data8(dwarf_info_section, 0);
-#endif
     }
     else
     {

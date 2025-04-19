@@ -15,7 +15,7 @@ TODO:
 - [ ] Remove `CONFIG_TCC_BCHECK`
 - [ ] What is `ONE_SOURCE`?
 - [x] Every `#if 0`
-- [ ] Every `PTR_SIZE` other than `8`
+- [x] Every `PTR_SIZE` other than `8`
 - [ ] Can I get rid of `TARGET_DEFS_ONLY`?
 - [ ] `CONFIG_TCC_BACKTRACE`?
 - [ ] `INC_DEBUG`
